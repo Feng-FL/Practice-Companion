@@ -1,0 +1,6 @@
+{
+  "name": "Music Practice Companion",
+  "description": "A daily practice app for musicians featuring audio playback, sheet music display, and note-taking functionality.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
