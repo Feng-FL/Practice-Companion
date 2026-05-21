@@ -12,8 +12,8 @@ export default function PracticeNotes({
   };
 
   return (
-    <div className="p-6 sm:p-8 flex-1 flex flex-col h-full relative text-[var(--color-retro-text)]">
-      <div className="flex justify-between items-center mb-4 sm:mb-6">
+    <div className="p-5 sm:p-6 flex-1 flex flex-col h-full relative text-[var(--color-retro-text)]">
+      <div className="flex justify-between items-center mb-3 sm:mb-4">
         <span className="text-[10px] font-sans uppercase tracking-[0.2em] font-bold text-[var(--color-retro-orange)]">Practice Notes</span>
       </div>
 
