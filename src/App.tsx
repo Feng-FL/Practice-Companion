@@ -12,8 +12,10 @@ export default function App() {
   const [sheetFile, setSheetFile] = useState<File | null>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [notes, setNotes] = useState<string>('');
+  const [practiceDays, setPracticeDays] = useState<number[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedFilterDay, setSelectedFilterDay] = useState<number | null>(null);
   
   const [sessionName, setSessionName] = useState("New Session");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -32,6 +34,7 @@ export default function App() {
       setSheetFile(item.sheetFile || null);
       setAudioFile(item.audioFile || null);
       setNotes(item.notes || '');
+      setPracticeDays(item.practiceDays || []);
     }
   };
 
@@ -42,6 +45,7 @@ export default function App() {
     setSheetFile(null);
     setAudioFile(null);
     setNotes('');
+    setPracticeDays([]);
   };
 
   const handleSave = async () => {
@@ -69,6 +73,7 @@ export default function App() {
       audioFile: audioFile || undefined,
       sheetFile: sheetFile || undefined,
       notes,
+      practiceDays,
       updatedAt: Date.now()
     };
 
@@ -93,6 +98,16 @@ export default function App() {
   }, [isEditingName]);
 
   const currentItem = items.find(i => i.id === currentItemId);
+
+  const filteredItems = selectedFilterDay === null 
+    ? items 
+    : items.filter(i => i.practiceDays?.includes(selectedFilterDay));
+
+  const togglePracticeDay = (day: number) => {
+    setPracticeDays(prev => 
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort()
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[var(--color-retro-bg)] text-[var(--color-retro-text)] font-sans flex flex-col lg:h-screen lg:overflow-hidden p-4 lg:p-6 gap-6 relative">
@@ -136,28 +151,64 @@ export default function App() {
             )}
             
             {isMenuOpen && !isEditingName && (
-              <div className="absolute top-full left-0 mt-4 w-72 bg-[var(--color-retro-surface)] rounded-xl border-2 border-[var(--color-retro-brown)] shadow-xl text-left overflow-hidden z-50">
+              <div className="absolute top-full left-0 mt-4 w-[340px] bg-[var(--color-retro-surface)] rounded-xl border-2 border-[var(--color-retro-brown)] shadow-xl text-left overflow-hidden z-50 flex flex-col">
+                <div className="p-4 border-b border-white/5 bg-black/10">
+                   <div className="text-[10px] uppercase font-sans tracking-widest font-bold text-white/40 mb-3">Filter by Practice Day</div>
+                   <div className="flex gap-1.5">
+                      <button
+                        onClick={() => setSelectedFilterDay(null)}
+                        className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-colors ${
+                          selectedFilterDay === null ? 'bg-[var(--color-retro-teal)] text-[var(--color-retro-bg)]' : 'bg-white/5 text-white/50 hover:bg-white/10'
+                        }`}
+                      >
+                        All
+                      </button>
+                      {[1,2,3,4,5,6,0].map(day => (
+                        <button
+                          key={day}
+                          onClick={() => setSelectedFilterDay(day === selectedFilterDay ? null : day)}
+                          className={`w-7 h-7 rounded-full text-[10px] font-bold font-sans flex items-center justify-center transition-colors ${
+                            selectedFilterDay === day ? 'bg-[var(--color-retro-orange)] text-[var(--color-retro-bg)]' : 'bg-white/5 text-white/50 hover:bg-white/10'
+                          }`}
+                        >
+                          {['S','M','T','W','T','F','S'][day]}
+                        </button>
+                      ))}
+                   </div>
+                </div>
+
                 <button 
                   onClick={handleNew}
-                  className="w-full px-6 py-4 flex items-center gap-3 bg-[var(--color-retro-brown)] text-[var(--color-retro-text)] hover:brightness-110 transition-all text-left font-display text-xl"
+                  className="w-full px-6 py-4 flex items-center gap-3 bg-[var(--color-retro-brown)] text-[var(--color-retro-text)] hover:brightness-110 transition-all text-left font-display text-xl shrink-0"
                 >
                    <Plus className="w-5 h-5" />
                    New Session
                 </button>
                 <div className="max-h-64 overflow-y-auto">
-                  {items.map(item => (
+                  {filteredItems.map(item => (
                     <button 
                       key={item.id}
                       onClick={() => loadItem(item.id)}
                       className="w-full px-6 py-4 flex flex-col hover:bg-[var(--color-retro-brown)]/20 transition-colors border-b border-white/5 text-left group"
                     >
-                      <span className="font-bold text-lg font-sans">{item.name}</span>
+                      <span className="font-bold text-lg font-sans flex items-center gap-2">
+                        {item.name}
+                        {item.practiceDays && item.practiceDays.length > 0 && (
+                           <div className="flex gap-0.5 ml-auto opacity-60">
+                              {item.practiceDays.map(d => (
+                                 <span key={d} className="w-4 h-4 rounded bg-white/10 text-[8px] flex items-center justify-center font-bold">
+                                   {['S','M','T','W','T','F','S'][d]}
+                                 </span>
+                              ))}
+                           </div>
+                        )}
+                      </span>
                       <span className="text-[10px] opacity-60 font-mono tracking-widest uppercase mt-1 group-hover:opacity-100">
                         {new Date(item.updatedAt).toLocaleDateString()}
                       </span>
                     </button>
                   ))}
-                  {items.length === 0 && (
+                  {filteredItems.length === 0 && (
                      <div className="px-6 py-8 text-center text-xs opacity-40 font-mono uppercase tracking-widest">
                        No saved scores
                      </div>
@@ -188,7 +239,7 @@ export default function App() {
           </div>
 
           <div className="lg:flex-1 h-[40vh] lg:h-full rounded-2xl bg-[var(--color-retro-surface)] shadow-xl border-l-[12px] border-[var(--color-retro-orange)] flex flex-col z-0 overflow-hidden relative">
-            <PracticeNotes notes={notes} onChange={setNotes} />
+            <PracticeNotes notes={notes} onChange={setNotes} practiceDays={practiceDays} onDayToggle={togglePracticeDay} />
           </div>
         </div>
 

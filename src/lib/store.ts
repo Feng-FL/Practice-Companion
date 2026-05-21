@@ -6,6 +6,7 @@ export interface RepertoireItem {
   audioFile?: File;
   sheetFile?: File;
   notes?: string;
+  practiceDays?: number[];
   updatedAt: number;
 }
 
