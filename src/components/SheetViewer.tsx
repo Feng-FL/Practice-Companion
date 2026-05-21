@@ -76,24 +76,25 @@ export default function SheetViewer({
   };
 
   return (
-    <section className="flex-1 flex flex-col bg-white overflow-hidden relative h-full w-full">
+    <section className="flex-1 flex flex-col overflow-hidden relative h-full w-full text-[var(--color-retro-text)]">
       {/* Absolute Header Overlay */}
-      <div className="absolute top-0 left-0 right-0 p-4 lg:p-8 flex justify-between items-center z-20 pointer-events-none">
-        <div className="hidden md:block px-4 py-2 bg-white/90 backdrop-blur-sm border border-[#DDD] text-[10px] uppercase tracking-[0.2em] font-bold text-[#1A1A1A] pointer-events-auto shadow-sm">
-          Sheet Music Viewer
+      <div className="absolute top-0 left-0 right-0 p-4 lg:p-6 flex justify-between items-center z-20 pointer-events-none">
+        <div className="hidden md:block px-5 py-2 bg-[var(--color-retro-teal)] text-[var(--color-retro-bg)] rounded-full text-[10px] uppercase font-sans tracking-[0.2em] font-bold pointer-events-auto shadow-md">
+          Master Score
         </div>
         
         <div className="flex items-center gap-2 lg:gap-4 pointer-events-auto ml-auto">
           {fileUrl && (
             <button 
               onClick={toggleFitMode}
-              className="px-3 py-2 bg-white/90 backdrop-blur-sm shadow-sm border border-[#DDD] hover:bg-[#F9F7F2] text-[#1A1A1A] text-[10px] uppercase tracking-widest font-bold transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-[var(--color-retro-bg)]/80 backdrop-blur-md rounded-full shadow-lg border border border-white/5 hover:-translate-y-0.5 hover:border-[var(--color-retro-teal)] text-[var(--color-retro-text)] text-[10px] uppercase tracking-widest font-sans font-bold transition-all flex items-center gap-2"
               title="Toggle Fit Mode"
             >
-              {fitMode === 'page' ? <><Move className="w-3 h-3" /> Fit Width</> : <><ZoomOut className="w-3 h-3" /> Fit Page</>}
+              {fitMode === 'page' ? <><Move className="w-3 h-3 text-[var(--color-retro-teal)]" /> Fit Width</> : <><ZoomOut className="w-3 h-3 text-[var(--color-retro-teal)]" /> Fit Page</>}
             </button>
           )}
-          <label className="cursor-pointer px-4 py-2 bg-[#1A1A1A] text-white text-[10px] uppercase tracking-widest font-bold hover:opacity-80 transition-opacity flex items-center gap-2 shadow-sm">
+          <label className="cursor-pointer px-5 py-2 bg-[var(--color-retro-bg)] border hover:-translate-y-0.5 border-white/5 hover:border-[var(--color-retro-teal)] rounded-full shadow-lg text-[10px] uppercase font-sans tracking-widest font-bold transition-all flex items-center gap-2">
+            <Upload className="w-3 h-3 text-[var(--color-retro-teal)]" />
             Load Score
             <input 
               type="file" 
@@ -105,18 +106,19 @@ export default function SheetViewer({
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden bg-[#F9F7F2] p-2 lg:p-8 flex flex-col mt-16 lg:mt-0">
+      <div className="flex-1 overflow-hidden p-2 lg:p-6 flex flex-col pt-16 lg:pt-20 relative">
+        <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(var(--color-retro-text)_1px,transparent_1px)] [background-size:24px_24px]"></div>
         {fileUrl ? (
-          <div className="w-full flex-1 max-w-6xl mx-auto border border-[#DDD] bg-white p-2 shadow-sm relative flex flex-col overflow-hidden">
+          <div className="w-full flex-1 max-w-6xl mx-auto rounded-xl border border-white/5 bg-white/5 p-2 shadow-inner relative flex flex-col overflow-hidden z-10">
             <div 
               ref={containerRef}
-              className={`flex-1 w-full h-full relative group ${fitMode === 'page' ? 'overflow-hidden flex items-center justify-center' : 'overflow-y-auto overflow-x-hidden'}`}
+              className={`flex-1 w-full h-full relative group rounded-lg ${fitMode === 'page' ? 'overflow-hidden flex items-center justify-center' : 'overflow-y-auto overflow-x-hidden'}`}
             >
               {fileType === 'image' ? (
                 <img 
                   src={fileUrl} 
                   alt="Sheet Music" 
-                  className={fitMode === 'page' ? 'absolute w-full h-full object-contain' : 'w-full h-auto block'}
+                  className={fitMode === 'page' ? 'absolute w-full h-full object-contain' : 'w-full h-auto block rounded'}
                 />
               ) : (
                 <Document
@@ -125,12 +127,12 @@ export default function SheetViewer({
                   onLoadError={(error) => setPdfError(error.message)}
                   className={`flex flex-col items-center w-full min-h-full ${fitMode === 'page' ? 'justify-center h-full' : 'justify-start'}`}
                   loading={
-                    <div className="text-[10px] uppercase font-bold tracking-widest opacity-40 italic h-64 flex items-center justify-center">
+                    <div className="text-[10px] uppercase font-bold tracking-widest font-sans text-[var(--color-retro-teal)] italic h-64 flex items-center justify-center drop-shadow-md">
                       Loading PDF...
                     </div>
                   }
                   error={
-                    <div className="text-[10px] uppercase font-bold tracking-widest text-[#C1351D] flex flex-col items-center justify-center p-8 text-center max-w-sm mx-auto">
+                    <div className="text-[10px] uppercase font-bold tracking-widest text-red-500 flex flex-col items-center justify-center p-8 text-center max-w-sm mx-auto">
                       <p className="mb-2">Failed to load PDF</p>
                       <p className="opacity-60">{pdfError || "Unknown error"}</p>
                     </div>
@@ -141,7 +143,7 @@ export default function SheetViewer({
                        pageNumber={pageNumber} 
                        width={fitMode === 'width' ? containerSize.width : undefined}
                        height={fitMode === 'page' ? containerSize.height : undefined}
-                       className="shadow-sm border border-[#DDD] bg-white"
+                       className="border border-white/10 bg-[#f4ece0] shadow-2xl rounded"
                        renderTextLayer={false}
                        renderAnnotationLayer={false}
                        loading=""
@@ -151,34 +153,34 @@ export default function SheetViewer({
               )}
               
               {fileType === 'pdf' && numPages && numPages > 1 && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#F9F7F2]/95 backdrop-blur-sm p-2 border border-[#1A1A1A] shadow-md z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[var(--color-retro-bg)]/90 backdrop-blur-md rounded-full p-2 shadow-xl border border-white/10 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <button 
                     onClick={() => setPageNumber(Math.max(1, pageNumber - 1))}
                     disabled={pageNumber <= 1}
-                    className="px-3 py-1.5 bg-[#1A1A1A] text-white hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed text-[10px] uppercase tracking-widest flex items-center gap-1"
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-[var(--color-retro-teal)] hover:text-white transition-colors disabled:opacity-30 disabled:hover:bg-white/10 disabled:cursor-not-allowed"
                   >
-                    <ChevronLeft className="w-3 h-3" /> Prev
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="text-[10px] font-mono tabular-nums px-2 font-bold opacity-80 text-[#1A1A1A]">
+                  <span className="text-[10px] font-mono tabular-nums px-3 font-bold text-white opacity-80">
                     {pageNumber} / {numPages}
                   </span>
                   <button 
                     onClick={() => setPageNumber(Math.min(numPages || 1, pageNumber + 1))}
                     disabled={pageNumber >= (numPages || 1)}
-                    className="px-3 py-1.5 bg-[#1A1A1A] text-white hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed text-[10px] uppercase tracking-widest flex items-center gap-1"
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-[var(--color-retro-teal)] hover:text-white transition-colors disabled:opacity-30 disabled:hover:bg-white/10 disabled:cursor-not-allowed"
                   >
-                    Next <ChevronRight className="w-3 h-3" />
+                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="max-w-[400px] w-full border border-[#DDD] bg-white p-12 shadow-sm relative text-center mx-auto my-auto">
-             <div className="absolute top-4 right-6 text-[10px] uppercase tracking-tighter opacity-30">No File Linked</div>
-             <ImageIcon className="w-8 h-8 opacity-20 mx-auto mb-6" />
-             <h3 className="font-serif text-xl mb-4 italic text-[#1A1A1A]">Awaiting Score</h3>
-             <p className="text-xs text-[#444] font-serif leading-relaxed opacity-60">Upload a PDF or Image of your sheet music to begin the session.</p>
+          <div className="max-w-[400px] w-full border border-white/5 rounded-2xl bg-[var(--color-retro-bg)] shadow-md relative text-center mx-auto my-auto z-10 p-12 overflow-hidden block">
+             <div className="absolute top-4 right-6 text-[10px] font-sans uppercase tracking-widest opacity-20">No Score Linked</div>
+             <ImageIcon className="w-12 h-12 opacity-20 mx-auto mb-6 text-[var(--color-retro-teal)]" />
+             <h3 className="font-display text-2xl mb-4 text-white opacity-90 tracking-wide">Awaiting Score</h3>
+             <p className="text-sm opacity-50 font-sans leading-relaxed">Load a PDF or Image of your sheet music to begin the session.</p>
           </div>
         )}
       </div>

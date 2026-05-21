@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AudioPlayer from './components/AudioPlayer';
 import SheetViewer from './components/SheetViewer';
 import PracticeNotes from './components/PracticeNotes';
-import { Music2, ChevronDown, Save, Plus } from 'lucide-react';
+import { Music, ChevronDown, Save, Plus } from 'lucide-react';
 import { Store, RepertoireItem } from './lib/store';
 
 export default function App() {
@@ -77,41 +77,41 @@ export default function App() {
   const currentItem = items.find(i => i.id === currentItemId);
 
   return (
-    <div className="min-h-screen bg-[#F9F7F2] text-[#1A1A1A] font-sans selection:bg-[#1A1A1A] selection:text-[#F9F7F2] flex flex-col lg:h-screen lg:overflow-hidden">
-      <header className="border-b border-[#1A1A1A] px-6 lg:px-8 py-5 lg:py-6 flex items-end justify-between shrink-0 bg-[#F9F7F2] relative z-50">
-        <div>
-          <h1 className="text-[10px] sm:text-xs uppercase tracking-[0.3em] font-bold text-[#1A1A1A] opacity-40 mb-1 flex items-center gap-2">
-            <Music2 className="w-4 h-4" />
+    <div className="min-h-screen bg-[var(--color-retro-bg)] text-[var(--color-retro-text)] font-sans flex flex-col lg:h-screen lg:overflow-hidden p-4 lg:p-6 gap-6 relative">
+      <header className="rounded-2xl bg-[var(--color-retro-surface)] px-6 lg:px-8 py-4 lg:py-5 flex items-center justify-between shrink-0 shadow-lg border-l-[12px] border-[var(--color-retro-brown)] relative z-50">
+        <div className="flex flex-col">
+          <h1 className="text-[10px] sm:text-xs uppercase font-sans tracking-[0.3em] font-bold text-[var(--color-retro-brown)] mb-1 flex items-center gap-2">
+            <Music className="w-4 h-4" />
             Practice Companion
           </h1>
           
           <div className="relative">
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-3xl sm:text-5xl font-serif italic tracking-tight flex items-center gap-2 hover:opacity-70 transition-opacity"
+              className="text-2xl sm:text-4xl font-display tracking-wide flex items-center gap-3 text-[var(--color-retro-text)] hover:text-[var(--color-retro-brown)] transition-colors mt-1"
             >
               {currentItem ? currentItem.name : "New Session"}
-              <ChevronDown className="w-6 h-6 mt-2 opacity-50" />
+              <ChevronDown className={`w-6 h-6 opacity-50 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
             </button>
             
             {isMenuOpen && (
-              <div className="absolute top-full left-0 mt-4 w-72 bg-white border border-[#1A1A1A] shadow-xl text-left">
+              <div className="absolute top-full left-0 mt-4 w-72 bg-[var(--color-retro-surface)] rounded-xl border-2 border-[var(--color-retro-brown)] shadow-xl text-left overflow-hidden z-50">
                 <button 
                   onClick={handleNew}
-                  className="w-full px-6 py-4 flex items-center gap-3 border-b border-[#EEE] hover:bg-[#F9F7F2] transition-colors text-left"
+                  className="w-full px-6 py-4 flex items-center gap-3 bg-[var(--color-retro-brown)] text-[var(--color-retro-text)] hover:brightness-110 transition-all text-left font-display text-xl"
                 >
-                   <Plus className="w-4 h-4 opacity-50" />
-                   <span className="font-serif italic text-lg">New Session</span>
+                   <Plus className="w-5 h-5" />
+                   New Session
                 </button>
                 <div className="max-h-64 overflow-y-auto">
                   {items.map(item => (
                     <button 
                       key={item.id}
                       onClick={() => loadItem(item.id)}
-                      className="w-full px-6 py-3 flex flex-col hover:bg-[#F9F7F2] transition-colors border-b border-[#EEE] text-left"
+                      className="w-full px-6 py-4 flex flex-col hover:bg-[var(--color-retro-brown)]/20 transition-colors border-b border-white/5 text-left group"
                     >
-                      <span className="font-serif">{item.name}</span>
-                      <span className="text-[10px] opacity-40 font-mono tracking-widest uppercase mt-1">
+                      <span className="font-bold text-lg font-sans">{item.name}</span>
+                      <span className="text-[10px] opacity-60 font-mono tracking-widest uppercase mt-1 group-hover:opacity-100">
                         {new Date(item.updatedAt).toLocaleDateString()}
                       </span>
                     </button>
@@ -127,33 +127,29 @@ export default function App() {
           </div>
         </div>
         <div className="text-right flex flex-col items-end">
-          <div className="text-[10px] uppercase tracking-widest font-bold opacity-60 mb-2">Status</div>
+          <div className="text-[10px] uppercase font-sans tracking-widest font-bold text-[var(--color-retro-brown)] mb-2">Status</div>
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className={`flex items-center gap-2 px-4 py-2 border border-[#1A1A1A] transition-colors ${isSaving ? 'bg-[#1A1A1A] text-white' : 'bg-transparent hover:bg-[#1A1A1A] hover:text-white'}`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all outline-none font-bold text-sm uppercase tracking-widest shadow-lg ${isSaving ? 'bg-[var(--color-retro-brown)] text-[var(--color-retro-bg)]' : 'bg-[var(--color-retro-bg)] border hover:-translate-y-0.5 border-white/5 text-[var(--color-retro-text)] hover:bg-[var(--color-retro-brown)]'}`}
           >
             <Save className="w-4 h-4" />
-            <span className="text-xs uppercase tracking-widest font-bold">
-              {isSaving ? 'Saved.' : 'Save'}
-            </span>
+            <span>{isSaving ? 'Saved.' : 'Save'}</span>
           </button>
         </div>
       </header>
 
-      <main className="flex-1 w-full mx-auto flex flex-col lg:h-[calc(100vh-101px)] lg:overflow-hidden">
-        <div className="flex flex-col lg:flex-row w-full h-full lg:overflow-hidden">
-          <div className="lg:flex-1 h-[65vh] lg:h-full border-b lg:border-b-0 lg:border-r border-[#1A1A1A] relative flex flex-col z-0">
-            <SheetViewer sheetFile={sheetFile} onLoadFile={setSheetFile} />
-          </div>
+      <main className="flex-1 w-full mx-auto flex flex-col lg:flex-row gap-6 lg:min-h-0 lg:overflow-hidden relative z-0">
+        <div className="lg:flex-1 h-[65vh] lg:h-full rounded-2xl bg-[var(--color-retro-surface)] shadow-xl border-l-[12px] border-[var(--color-retro-teal)] flex flex-col z-0 overflow-hidden relative">
+          <SheetViewer sheetFile={sheetFile} onLoadFile={setSheetFile} />
+        </div>
 
-          <div className="lg:w-[320px] xl:w-[360px] shrink-0 flex flex-col bg-white relative z-0">
-            <div className="shrink-0">
-              <AudioPlayer audioFile={audioFile} onLoadFile={setAudioFile} />
-            </div>
-            <div className="flex-1 flex flex-col border-t border-[#1A1A1A] lg:border-t-0 min-h-[400px] lg:min-h-0 lg:overflow-hidden">
-              <PracticeNotes notes={notes} onChange={setNotes} />
-            </div>
+        <div className="lg:w-[320px] xl:w-[360px] shrink-0 flex flex-col gap-6 relative z-0 h-full">
+          <div className="shrink-0 rounded-2xl bg-[var(--color-retro-surface)] shadow-lg border-l-[12px] border-[var(--color-retro-red)] flex flex-col overflow-hidden relative">
+            <AudioPlayer audioFile={audioFile} onLoadFile={setAudioFile} />
+          </div>
+          <div className="flex-1 rounded-2xl bg-[var(--color-retro-surface)] shadow-lg border-l-[12px] border-[var(--color-retro-orange)] flex flex-col overflow-hidden min-h-[300px] relative">
+            <PracticeNotes notes={notes} onChange={setNotes} />
           </div>
         </div>
       </main>
