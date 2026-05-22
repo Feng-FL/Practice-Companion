@@ -3,49 +3,41 @@ import React, { useState, useEffect } from 'react';
 export default function PracticeNotes({ 
   notes, 
   onChange,
-  practiceDays = [],
-  onDayToggle
+  musicalKeys = [],
+  onKeyToggle
 }: { 
   notes: string;
   onChange: (n: string) => void;
-  practiceDays?: number[];
-  onDayToggle?: (day: number) => void;
+  musicalKeys?: string[];
+  onKeyToggle?: (key: string) => void;
 }) {
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange(e.target.value);
   };
 
-  const DAYS = [
-    { id: 1, label: 'Mon' },
-    { id: 2, label: 'Tue' },
-    { id: 3, label: 'Wed' },
-    { id: 4, label: 'Thu' },
-    { id: 5, label: 'Fri' },
-    { id: 6, label: 'Sat' },
-    { id: 0, label: 'Sun' },
-  ];
+  const KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'bB', 'bA', '#F', '#C', 'bE'];
 
   return (
     <div className="p-5 sm:p-6 flex-1 flex flex-col h-full relative text-[var(--color-retro-text)]">
       <div className="flex justify-between items-center mb-3 sm:mb-4">
-        <span className="text-[10px] font-sans uppercase tracking-[0.2em] font-bold text-[var(--color-retro-orange)]">Practice Notes</span>
+        <span className="text-[10px] font-sans uppercase tracking-[0.2em] font-bold text-[var(--color-retro-orange)] shrink-0">Practice Notes</span>
         
-        {onDayToggle && (
-          <div className="flex gap-1 bg-black/20 p-1.5 rounded-full">
-            {DAYS.map(d => {
-              const isActive = practiceDays.includes(d.id);
+        {onKeyToggle && (
+          <div className="flex flex-wrap gap-1 bg-black/20 p-1.5 rounded-xl ml-2 justify-end">
+            {KEYS.map(k => {
+              const isActive = musicalKeys.includes(k);
               return (
                 <button 
-                  key={d.id}
-                  onClick={() => onDayToggle(d.id)}
-                  className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full text-[9px] font-bold font-sans flex items-center justify-center transition-all ${
+                  key={k}
+                  onClick={() => onKeyToggle(k)}
+                  className={`min-w-[24px] h-6 px-1 sm:h-7 rounded text-[10px] sm:text-xs font-bold font-sans flex items-center justify-center transition-all ${
                     isActive 
-                      ? 'bg-[var(--color-retro-orange)] text-[var(--color-retro-bg)] shadow-[0_0_10px_rgba(222,109,56,0.6)] scale-110' 
+                      ? 'bg-[var(--color-retro-orange)] text-[var(--color-retro-bg)] shadow-[0_0_10px_rgba(222,109,56,0.6)] scale-105' 
                       : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/80'
                   }`}
-                  title={d.label}
+                  title={k}
                 >
-                  {d.label[0]}
+                  {k}
                 </button>
               );
             })}

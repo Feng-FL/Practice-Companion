@@ -12,10 +12,10 @@ export default function App() {
   const [sheetFile, setSheetFile] = useState<File | null>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [notes, setNotes] = useState<string>('');
-  const [practiceDays, setPracticeDays] = useState<number[]>([]);
+  const [musicalKeys, setMusicalKeys] = useState<string[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectedFilterDay, setSelectedFilterDay] = useState<number | null>(null);
+  const [selectedFilterKey, setSelectedFilterKey] = useState<string | null>(null);
   
   const [sessionName, setSessionName] = useState("New Session");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -34,7 +34,7 @@ export default function App() {
       setSheetFile(item.sheetFile || null);
       setAudioFile(item.audioFile || null);
       setNotes(item.notes || '');
-      setPracticeDays(item.practiceDays || []);
+      setMusicalKeys(item.musicalKeys || []);
     }
   };
 
@@ -45,7 +45,7 @@ export default function App() {
     setSheetFile(null);
     setAudioFile(null);
     setNotes('');
-    setPracticeDays([]);
+    setMusicalKeys([]);
   };
 
   const handleSave = async () => {
@@ -73,7 +73,7 @@ export default function App() {
       audioFile: audioFile || undefined,
       sheetFile: sheetFile || undefined,
       notes,
-      practiceDays,
+      musicalKeys,
       updatedAt: Date.now()
     };
 
@@ -99,15 +99,17 @@ export default function App() {
 
   const currentItem = items.find(i => i.id === currentItemId);
 
-  const filteredItems = selectedFilterDay === null 
+  const filteredItems = selectedFilterKey === null 
     ? items 
-    : items.filter(i => i.practiceDays?.includes(selectedFilterDay));
+    : items.filter(i => i.musicalKeys?.includes(selectedFilterKey));
 
-  const togglePracticeDay = (day: number) => {
-    setPracticeDays(prev => 
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort()
+  const toggleMusicalKey = (key: string) => {
+    setMusicalKeys(prev => 
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
     );
   };
+
+  const KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'bB', 'bA', '#F', '#C', 'bE'];
 
   return (
     <div className="min-h-screen bg-[var(--color-retro-bg)] text-[var(--color-retro-text)] font-sans flex flex-col lg:h-screen lg:overflow-hidden p-4 lg:p-6 gap-6 relative">
@@ -151,27 +153,27 @@ export default function App() {
             )}
             
             {isMenuOpen && !isEditingName && (
-              <div className="absolute top-full left-0 mt-4 w-[340px] bg-[var(--color-retro-surface)] rounded-xl border-2 border-[var(--color-retro-brown)] shadow-xl text-left overflow-hidden z-50 flex flex-col">
+              <div className="absolute top-full left-0 mt-4 w-[380px] bg-[var(--color-retro-surface)] rounded-xl border-2 border-[var(--color-retro-brown)] shadow-xl text-left overflow-hidden z-50 flex flex-col">
                 <div className="p-4 border-b border-white/5 bg-black/10">
-                   <div className="text-[10px] uppercase font-sans tracking-widest font-bold text-white/40 mb-3">Filter by Practice Day</div>
-                   <div className="flex gap-1.5">
+                   <div className="text-[10px] uppercase font-sans tracking-widest font-bold text-white/40 mb-3">Filter by Key</div>
+                   <div className="flex flex-wrap gap-1.5">
                       <button
-                        onClick={() => setSelectedFilterDay(null)}
+                        onClick={() => setSelectedFilterKey(null)}
                         className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-colors ${
-                          selectedFilterDay === null ? 'bg-[var(--color-retro-teal)] text-[var(--color-retro-bg)]' : 'bg-white/5 text-white/50 hover:bg-white/10'
+                          selectedFilterKey === null ? 'bg-[var(--color-retro-teal)] text-[var(--color-retro-bg)]' : 'bg-white/5 text-white/50 hover:bg-white/10'
                         }`}
                       >
                         All
                       </button>
-                      {[1,2,3,4,5,6,0].map(day => (
+                      {KEYS.map(key => (
                         <button
-                          key={day}
-                          onClick={() => setSelectedFilterDay(day === selectedFilterDay ? null : day)}
-                          className={`w-7 h-7 rounded-full text-[10px] font-bold font-sans flex items-center justify-center transition-colors ${
-                            selectedFilterDay === day ? 'bg-[var(--color-retro-orange)] text-[var(--color-retro-bg)]' : 'bg-white/5 text-white/50 hover:bg-white/10'
+                          key={key}
+                          onClick={() => setSelectedFilterKey(key === selectedFilterKey ? null : key)}
+                          className={`min-w-[28px] h-7 px-1.5 rounded-md text-[10px] font-bold font-sans flex items-center justify-center transition-colors ${
+                            selectedFilterKey === key ? 'bg-[var(--color-retro-orange)] text-[var(--color-retro-bg)]' : 'bg-white/5 text-white/50 hover:bg-white/10'
                           }`}
                         >
-                          {['S','M','T','W','T','F','S'][day]}
+                          {key}
                         </button>
                       ))}
                    </div>
@@ -191,13 +193,13 @@ export default function App() {
                       onClick={() => loadItem(item.id)}
                       className="w-full px-6 py-4 flex flex-col hover:bg-[var(--color-retro-brown)]/20 transition-colors border-b border-white/5 text-left group"
                     >
-                      <span className="font-bold text-lg font-sans flex items-center gap-2">
+                      <span className="font-bold text-lg font-sans flex items-center gap-2 flex-wrap">
                         {item.name}
-                        {item.practiceDays && item.practiceDays.length > 0 && (
-                           <div className="flex gap-0.5 ml-auto opacity-60">
-                              {item.practiceDays.map(d => (
-                                 <span key={d} className="w-4 h-4 rounded bg-white/10 text-[8px] flex items-center justify-center font-bold">
-                                   {['S','M','T','W','T','F','S'][d]}
+                        {item.musicalKeys && item.musicalKeys.length > 0 && (
+                           <div className="flex gap-1 flex-wrap opacity-60 ml-auto">
+                              {item.musicalKeys.map(k => (
+                                 <span key={k} className="px-1 h-4 rounded bg-white/10 text-[8px] flex items-center justify-center font-bold">
+                                   {k}
                                  </span>
                               ))}
                            </div>
@@ -239,7 +241,7 @@ export default function App() {
           </div>
 
           <div className="lg:flex-1 h-[40vh] lg:h-full rounded-2xl bg-[var(--color-retro-surface)] shadow-xl border-l-[12px] border-[var(--color-retro-orange)] flex flex-col z-0 overflow-hidden relative">
-            <PracticeNotes notes={notes} onChange={setNotes} practiceDays={practiceDays} onDayToggle={togglePracticeDay} />
+            <PracticeNotes notes={notes} onChange={setNotes} musicalKeys={musicalKeys} onKeyToggle={toggleMusicalKey} />
           </div>
         </div>
 
