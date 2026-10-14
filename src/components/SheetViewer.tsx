@@ -7,38 +7,38 @@ import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
-export default function SheetViewer({ 
-  sheetFile, 
-  onLoadFile 
-}: { 
-  sheetFile: File | null;
+interface Props {
+  sheetUrl: string | null;
+  sheetMime?: string;
+  sheetFilename?: string;
   onLoadFile: (file: File) => void;
-}) {
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
+}
+
+function looksLikePdf(mime?: string, filename?: string): boolean {
+  if (mime && mime.toLowerCase().includes('pdf')) return true;
+  if (filename && filename.toLowerCase().endsWith('.pdf')) return true;
+  return false;
+}
+
+export default function SheetViewer({ sheetUrl, sheetMime, sheetFilename, onLoadFile }: Props) {
   const [fileType, setFileType] = useState<'image' | 'pdf' | null>(null);
   const [numPages, setNumPages] = useState<number>();
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [fitMode, setFitMode] = useState<'width' | 'page'>('page');
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    if (sheetFile) {
-      if (fileUrl) URL.revokeObjectURL(fileUrl);
-      const url = URL.createObjectURL(sheetFile);
-      setFileUrl(url);
+    if (sheetUrl) {
       setPdfError(null);
-      setFileType(sheetFile.type.includes('pdf') ? 'pdf' : 'image');
+      setFileType(looksLikePdf(sheetMime, sheetFilename) ? 'pdf' : 'image');
       setPageNumber(1);
-      
-      return () => URL.revokeObjectURL(url);
     } else {
-       setFileUrl(null);
-       setFileType(null);
+      setFileType(null);
     }
-  }, [sheetFile]);
+  }, [sheetUrl, sheetMime, sheetFilename]);
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
@@ -82,10 +82,10 @@ export default function SheetViewer({
         <div className="hidden md:block px-5 py-2 bg-[var(--color-retro-teal)] text-[var(--color-retro-bg)] rounded-full text-[10px] uppercase font-sans tracking-[0.2em] font-bold pointer-events-auto shadow-md">
           Master Score
         </div>
-        
+
         <div className="flex items-center gap-2 lg:gap-4 pointer-events-auto ml-auto">
-          {fileUrl && (
-            <button 
+          {sheetUrl && (
+            <button
               onClick={toggleFitMode}
               className="px-4 py-2 bg-[var(--color-retro-bg)]/80 backdrop-blur-md rounded-full shadow-lg border border border-white/5 hover:-translate-y-0.5 hover:border-[var(--color-retro-teal)] text-[var(--color-retro-text)] text-[10px] uppercase tracking-widest font-sans font-bold transition-all flex items-center gap-2"
               title="Toggle Fit Mode"
@@ -96,10 +96,10 @@ export default function SheetViewer({
           <label className="cursor-pointer px-5 py-2 bg-[var(--color-retro-bg)] border hover:-translate-y-0.5 border-white/5 hover:border-[var(--color-retro-teal)] rounded-full shadow-lg text-[10px] uppercase font-sans tracking-widest font-bold transition-all flex items-center gap-2">
             <Upload className="w-3 h-3 text-[var(--color-retro-teal)]" />
             Load Score
-            <input 
-              type="file" 
-              accept="image/*,application/pdf" 
-              className="hidden" 
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
               onChange={handleFileUpload}
             />
           </label>
@@ -108,21 +108,21 @@ export default function SheetViewer({
 
       <div className="flex-1 overflow-hidden p-2 lg:p-6 flex flex-col pt-16 lg:pt-20 relative">
         <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(var(--color-retro-text)_1px,transparent_1px)] [background-size:24px_24px]"></div>
-        {fileUrl ? (
+        {sheetUrl ? (
           <div className="w-full flex-1 max-w-6xl mx-auto rounded-xl border border-white/5 bg-white/5 p-2 shadow-inner relative flex flex-col overflow-hidden z-10">
-            <div 
+            <div
               ref={containerRef}
               className={`flex-1 w-full h-full relative group rounded-lg ${fitMode === 'page' ? 'overflow-hidden flex items-center justify-center' : 'overflow-y-auto overflow-x-hidden'}`}
             >
               {fileType === 'image' ? (
-                <img 
-                  src={fileUrl} 
-                  alt="Sheet Music" 
+                <img
+                  src={sheetUrl}
+                  alt="Sheet Music"
                   className={fitMode === 'page' ? 'absolute w-full h-full object-contain' : 'w-full h-auto block rounded'}
                 />
               ) : (
                 <Document
-                  file={sheetFile}
+                  file={sheetUrl}
                   onLoadSuccess={onDocumentLoadSuccess}
                   onLoadError={(error) => setPdfError(error.message)}
                   className={`flex flex-col items-center w-full min-h-full ${fitMode === 'page' ? 'justify-center h-full' : 'justify-start'}`}
@@ -139,8 +139,8 @@ export default function SheetViewer({
                   }
                 >
                   {containerSize.width > 0 && (
-                     <Page 
-                       pageNumber={pageNumber} 
+                     <Page
+                       pageNumber={pageNumber}
                        width={fitMode === 'width' ? containerSize.width : undefined}
                        height={fitMode === 'page' ? containerSize.height : undefined}
                        className="border border-white/10 bg-[#f4ece0] shadow-2xl rounded"
@@ -151,10 +151,10 @@ export default function SheetViewer({
                   )}
                 </Document>
               )}
-              
+
               {fileType === 'pdf' && numPages && numPages > 1 && (
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[var(--color-retro-bg)]/90 backdrop-blur-md rounded-full p-2 shadow-xl border border-white/10 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <button 
+                  <button
                     onClick={() => setPageNumber(Math.max(1, pageNumber - 1))}
                     disabled={pageNumber <= 1}
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-[var(--color-retro-teal)] hover:text-white transition-colors disabled:opacity-30 disabled:hover:bg-white/10 disabled:cursor-not-allowed"
@@ -164,7 +164,7 @@ export default function SheetViewer({
                   <span className="text-[10px] font-mono tabular-nums px-3 font-bold text-white opacity-80">
                     {pageNumber} / {numPages}
                   </span>
-                  <button 
+                  <button
                     onClick={() => setPageNumber(Math.min(numPages || 1, pageNumber + 1))}
                     disabled={pageNumber >= (numPages || 1)}
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-[var(--color-retro-teal)] hover:text-white transition-colors disabled:opacity-30 disabled:hover:bg-white/10 disabled:cursor-not-allowed"

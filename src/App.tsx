@@ -2,61 +2,117 @@ import React, { useState, useEffect, useRef } from 'react';
 import AudioPlayer from './components/AudioPlayer';
 import SheetViewer from './components/SheetViewer';
 import PracticeNotes from './components/PracticeNotes';
-import { Music, ChevronDown, Save, Plus, Edit2 } from 'lucide-react';
-import { Store, RepertoireItem } from './lib/store';
+import { Music, ChevronDown, Save, Plus, Edit2, Settings as SettingsIcon, Trash2, X, Loader2, Upload as UploadIcon } from 'lucide-react';
+import { Store } from './lib/store';
+import { useSyncToken } from './hooks/useSyncToken';
+import { useSyncStatus } from './hooks/useSyncStatus';
+import SyncStatus from './components/SyncStatus';
+import TokenGate from './components/TokenGate';
+import MigrationBanner from './components/MigrationBanner';
+import SettingsModal from './components/SettingsModal';
+import type { LoadedItem } from './lib/types';
+
+const KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'bB', 'bA', '#F', '#C', 'bE'];
 
 export default function App() {
-  const [items, setItems] = useState<RepertoireItem[]>([]);
+  // ---- Token gate ----
+  const { token } = useSyncToken();
+  if (!token) {
+    return <TokenGate />;
+  }
+
+  return <AppBody />;
+}
+
+function AppBody() {
+  // ---- Cloud-synced items ----
+  const [items, setItems] = useState<LoadedItem[]>([]);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
-  
-  const [sheetFile, setSheetFile] = useState<File | null>(null);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
+
+  // ---- Currently-committed file refs (URLs come from cloud; mime/filename too) ----
+  const [sheetUrl, setSheetUrl] = useState<string | null>(null);
+  const [sheetMime, setSheetMime] = useState<string | undefined>();
+  const [sheetFilename, setSheetFilename] = useState<string | undefined>();
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioMime, setAudioMime] = useState<string | undefined>();
+  const [audioFilename, setAudioFilename] = useState<string | undefined>();
+
+  // ---- Pending uploads (Files queued for upload on next save) ----
+  const [pendingAudioFile, setPendingAudioFile] = useState<File | null>(null);
+  const [pendingSheetFile, setPendingSheetFile] = useState<File | null>(null);
+
+  // ---- Editable metadata ----
   const [notes, setNotes] = useState<string>('');
   const [musicalKeys, setMusicalKeys] = useState<string[]>([]);
+
+  // ---- UI state ----
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ audio?: number; sheet?: number } | null>(null);
   const [selectedFilterKey, setSelectedFilterKey] = useState<string | null>(null);
-  
-  const [sessionName, setSessionName] = useState("New Session");
+  const [sessionName, setSessionName] = useState('New Session');
   const [isEditingName, setIsEditingName] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<LoadedItem | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    Store.getAllItems().then(setItems);
-  }, []);
+  // ---- Initial load + refresh hook ----
+  const refreshList = async () => {
+    const all = await Store.getAllItems();
+    setItems(all);
+  };
+  useEffect(() => { refreshList(); }, []);
+  // Reload when token changes (Settings → Update)
+  useSyncStatus(); // subscribes for the badge dot
+
+  const currentItem = items.find((i) => i.id === currentItemId) ?? null;
 
   const loadItem = async (id: string) => {
     setIsMenuOpen(false);
     const item = await Store.getItem(id);
-    if (item) {
-      setCurrentItemId(item.id);
-      setSessionName(item.name);
-      setSheetFile(item.sheetFile || null);
-      setAudioFile(item.audioFile || null);
-      setNotes(item.notes || '');
-      setMusicalKeys(item.musicalKeys || []);
-    }
+    if (!item) return;
+    setCurrentItemId(item.id);
+    setSessionName(item.name);
+    setSheetUrl(item.sheetSignedUrl ?? null);
+    setSheetMime(item.sheet?.mime);
+    setSheetFilename(item.sheet?.filename);
+    setAudioUrl(item.audioSignedUrl ?? null);
+    setAudioMime(item.audio?.mime);
+    setAudioFilename(item.audio?.filename);
+    setNotes(item.notes ?? '');
+    setMusicalKeys(item.musicalKeys ?? []);
+    setPendingSheetFile(null);
+    setPendingAudioFile(null);
   };
 
   const handleNew = () => {
     setIsMenuOpen(false);
     setCurrentItemId(null);
-    setSessionName("New Session");
-    setSheetFile(null);
-    setAudioFile(null);
+    setSessionName('New Session');
+    setSheetUrl(null); setSheetMime(undefined); setSheetFilename(undefined);
+    setAudioUrl(null); setAudioMime(undefined); setAudioFilename(undefined);
+    setPendingAudioFile(null); setPendingSheetFile(null);
     setNotes('');
     setMusicalKeys([]);
+    setSaveError(null);
   };
 
   const handleSave = async () => {
     setIsSaving(true);
-    let id = currentItemId;
-    let nameToSave = sessionName;
-    
-    if (!id) {
-      if (sessionName === "New Session") {
-        const suggestedName = sheetFile?.name.replace(/\.[^/.]+$/, "") || audioFile?.name.replace(/\.[^/.]+$/, "") || "Untitled Score";
-        const inputName = prompt("Enter a name for this piece:", suggestedName);
+    setSaveError(null);
+    setUploadProgress({});
+    try {
+      let id = currentItemId ?? undefined;
+      let nameToSave = sessionName;
+      const isNew = !id;
+
+      if (isNew && sessionName === 'New Session') {
+        const suggestedName =
+          (pendingSheetFile?.name ?? sheetFilename ?? '').replace(/\.[^/.]+$/, '') ||
+          (pendingAudioFile?.name ?? audioFilename ?? '').replace(/\.[^/.]+$/, '') ||
+          'Untitled Score';
+        const inputName = window.prompt('Enter a name for this piece:', suggestedName);
         if (!inputName) {
           setIsSaving(false);
           return;
@@ -64,31 +120,55 @@ export default function App() {
         nameToSave = inputName;
         setSessionName(inputName);
       }
-      id = Date.now().toString();
+
+      const saved = await Store.saveItem(
+        {
+          id,
+          name: nameToSave,
+          notes,
+          musicalKeys,
+          audioFile: pendingAudioFile ?? undefined,
+          sheetFile: pendingSheetFile ?? undefined,
+        },
+        (phase, loaded, total) => {
+          setUploadProgress((p) => ({ ...p, [phase]: total > 0 ? loaded / total : 0 }));
+        },
+      );
+
+      setCurrentItemId(saved.id);
+      setAudioUrl(saved.audioSignedUrl ?? null);
+      setAudioMime(saved.audio?.mime);
+      setAudioFilename(saved.audio?.filename);
+      setSheetUrl(saved.sheetSignedUrl ?? null);
+      setSheetMime(saved.sheet?.mime);
+      setSheetFilename(saved.sheet?.filename);
+      setPendingAudioFile(null);
+      setPendingSheetFile(null);
+      await refreshList();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSaveError(msg);
+      console.error('[App.handleSave] failed', e);
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setUploadProgress(null), 1200);
     }
+  };
 
-    const newItem: RepertoireItem = {
-      id: id,
-      name: nameToSave,
-      audioFile: audioFile || undefined,
-      sheetFile: sheetFile || undefined,
-      notes,
-      musicalKeys,
-      updatedAt: Date.now()
-    };
-
-    await Store.saveItem(newItem);
-    const newItems = await Store.getAllItems();
-    setItems(newItems);
-    setCurrentItemId(id);
-    
-    setTimeout(() => setIsSaving(false), 800);
+  const handleDelete = async (item: LoadedItem) => {
+    setPendingDelete(null);
+    try {
+      await Store.deleteItem(item.id);
+      if (currentItemId === item.id) handleNew();
+      await refreshList();
+    } catch (e) {
+      console.error('[App.handleDelete] failed', e);
+      alert('Delete failed: ' + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      setIsEditingName(false);
-    }
+    if (e.key === 'Enter') setIsEditingName(false);
   };
 
   useEffect(() => {
@@ -97,29 +177,23 @@ export default function App() {
     }
   }, [isEditingName]);
 
-  const currentItem = items.find(i => i.id === currentItemId);
-
-  const filteredItems = selectedFilterKey === null 
-    ? items 
-    : items.filter(i => i.musicalKeys?.includes(selectedFilterKey));
+  const filteredItems = selectedFilterKey === null
+    ? items
+    : items.filter((i) => i.musicalKeys?.includes(selectedFilterKey));
 
   const toggleMusicalKey = (key: string) => {
-    setMusicalKeys(prev => 
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    );
+    setMusicalKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   };
-
-  const KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'bB', 'bA', '#F', '#C', 'bE'];
 
   return (
     <div className="min-h-screen bg-[var(--color-retro-bg)] text-[var(--color-retro-text)] font-sans flex flex-col lg:h-screen lg:overflow-hidden p-4 lg:p-6 gap-6 relative">
-      <header className="rounded-2xl bg-[var(--color-retro-surface)] px-6 lg:px-8 py-4 lg:py-5 flex items-center justify-between shrink-0 shadow-lg border-l-[12px] border-[var(--color-retro-brown)] relative z-50">
-        <div className="flex flex-col flex-1">
+      <header className="rounded-2xl bg-[var(--color-retro-surface)] px-6 lg:px-8 py-4 lg:py-5 flex items-center justify-between shrink-0 shadow-lg border-l-[12px] border-[var(--color-retro-brown)] relative z-50 gap-4">
+        <div className="flex flex-col flex-1 min-w-0">
           <h1 className="text-[10px] sm:text-xs uppercase font-sans tracking-[0.3em] font-bold text-[var(--color-retro-brown)] mb-1 flex items-center gap-2">
             <Music className="w-4 h-4" />
             Practice Companion
           </h1>
-          
+
           <div className="relative flex items-center gap-3">
             {isEditingName ? (
               <input
@@ -132,7 +206,7 @@ export default function App() {
                 className="text-2xl sm:text-4xl font-display tracking-wide outline-none bg-transparent border-b-2 border-[var(--color-retro-brown)] text-[var(--color-retro-text)] mb-0 w-full max-w-sm"
               />
             ) : (
-              <button 
+              <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="text-2xl sm:text-4xl font-display tracking-wide flex items-center gap-3 text-[var(--color-retro-text)] hover:text-[var(--color-retro-brown)] transition-colors mt-1 truncate max-w-full"
                 title="Change Session"
@@ -141,9 +215,9 @@ export default function App() {
                 <ChevronDown className={`w-6 h-6 opacity-50 shrink-0 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
               </button>
             )}
-            
+
             {!isEditingName && (
-              <button 
+              <button
                 onClick={() => setIsEditingName(true)}
                 className="mt-1 opacity-50 hover:opacity-100 hover:text-[var(--color-retro-brown)] transition-colors shrink-0"
                 title="Rename Piece"
@@ -151,9 +225,20 @@ export default function App() {
                 <Edit2 className="w-5 h-5" />
               </button>
             )}
-            
+
+            {/* Delete current item */}
+            {currentItemId && (
+              <button
+                onClick={() => currentItem && setPendingDelete(currentItem)}
+                className="mt-1 opacity-40 hover:opacity-100 hover:text-[var(--color-retro-red)] transition-colors shrink-0"
+                title="Delete this piece from the cloud"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            )}
+
             {isMenuOpen && !isEditingName && (
-              <div className="absolute top-full left-0 mt-4 w-[380px] bg-[var(--color-retro-surface)] rounded-xl border-2 border-[var(--color-retro-brown)] shadow-xl text-left overflow-hidden z-50 flex flex-col">
+              <div className="absolute top-full left-0 mt-4 w-[380px] bg-[var(--color-retro-surface)] rounded-xl border-2 border-[var(--color-retro-brown)] shadow-xl text-left overflow-hidden z-50 flex flex-col max-h-[70vh]">
                 <div className="p-4 border-b border-white/5 bg-black/10">
                    <div className="text-[10px] uppercase font-sans tracking-widest font-bold text-white/40 mb-3">Filter by Key</div>
                    <div className="flex flex-wrap gap-1.5">
@@ -165,7 +250,7 @@ export default function App() {
                       >
                         All
                       </button>
-                      {KEYS.map(key => (
+                      {KEYS.map((key) => (
                         <button
                           key={key}
                           onClick={() => setSelectedFilterKey(key === selectedFilterKey ? null : key)}
@@ -179,7 +264,7 @@ export default function App() {
                    </div>
                 </div>
 
-                <button 
+                <button
                   onClick={handleNew}
                   className="w-full px-6 py-4 flex items-center gap-3 bg-[var(--color-retro-brown)] text-[var(--color-retro-text)] hover:brightness-110 transition-all text-left font-display text-xl shrink-0"
                 >
@@ -187,28 +272,39 @@ export default function App() {
                    New Session
                 </button>
                 <div className="max-h-64 overflow-y-auto">
-                  {filteredItems.map(item => (
-                    <button 
+                  {filteredItems.map((item) => (
+                    <div
                       key={item.id}
-                      onClick={() => loadItem(item.id)}
-                      className="w-full px-6 py-4 flex flex-col hover:bg-[var(--color-retro-brown)]/20 transition-colors border-b border-white/5 text-left group"
+                      className="group flex items-stretch border-b border-white/5 hover:bg-[var(--color-retro-brown)]/20 transition-colors"
                     >
-                      <span className="font-bold text-lg font-sans flex items-center gap-2 flex-wrap">
-                        {item.name}
-                        {item.musicalKeys && item.musicalKeys.length > 0 && (
-                           <div className="flex gap-1 flex-wrap opacity-60 ml-auto">
-                              {item.musicalKeys.map(k => (
-                                 <span key={k} className="px-1 h-4 rounded bg-white/10 text-[8px] flex items-center justify-center font-bold">
-                                   {k}
-                                 </span>
-                              ))}
-                           </div>
-                        )}
-                      </span>
-                      <span className="text-[10px] opacity-60 font-mono tracking-widest uppercase mt-1 group-hover:opacity-100">
-                        {new Date(item.updatedAt).toLocaleDateString()}
-                      </span>
-                    </button>
+                      <button
+                        onClick={() => loadItem(item.id)}
+                        className="flex-1 px-6 py-4 flex flex-col text-left min-w-0"
+                      >
+                        <span className="font-bold text-lg font-sans flex items-center gap-2 flex-wrap">
+                          {item.name}
+                          {item.musicalKeys && item.musicalKeys.length > 0 && (
+                             <div className="flex gap-1 flex-wrap opacity-60 ml-auto">
+                                {item.musicalKeys.map((k) => (
+                                   <span key={k} className="px-1 h-4 rounded bg-white/10 text-[8px] flex items-center justify-center font-bold">
+                                     {k}
+                                   </span>
+                                ))}
+                             </div>
+                          )}
+                        </span>
+                        <span className="text-[10px] opacity-60 font-mono tracking-widest uppercase mt-1 group-hover:opacity-100">
+                          {new Date(item.updatedAt).toLocaleDateString()}
+                        </span>
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setPendingDelete(item); }}
+                        className="px-4 opacity-30 group-hover:opacity-100 hover:text-[var(--color-retro-red)] transition-opacity"
+                        title="Delete this piece from the cloud"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   ))}
                   {filteredItems.length === 0 && (
                      <div className="px-6 py-8 text-center text-xs opacity-40 font-mono uppercase tracking-widest">
@@ -220,24 +316,83 @@ export default function App() {
             )}
           </div>
         </div>
-        <div className="text-right flex flex-col items-end">
-          <div className="text-[10px] uppercase font-sans tracking-widest font-bold text-[var(--color-retro-brown)] mb-2">Status</div>
-          <button 
-            onClick={handleSave}
-            disabled={isSaving}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all outline-none font-bold text-sm uppercase tracking-widest shadow-lg ${isSaving ? 'bg-[var(--color-retro-brown)] text-[var(--color-retro-bg)]' : 'bg-[var(--color-retro-bg)] border hover:-translate-y-0.5 border-white/5 text-[var(--color-retro-text)] hover:bg-[var(--color-retro-brown)]'}`}
+
+        <div className="flex items-center gap-3 shrink-0">
+          <SyncStatus onClick={() => setShowSettings(true)} />
+          <button
+            onClick={() => setShowSettings(true)}
+            className="opacity-60 hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-white/5"
+            title="Settings"
           >
-            <Save className="w-4 h-4" />
-            <span>{isSaving ? 'Saved.' : 'Save'}</span>
+            <SettingsIcon className="w-5 h-5" />
           </button>
+          <div className="flex flex-col items-end">
+            <div className="text-[10px] uppercase font-sans tracking-widest font-bold text-[var(--color-retro-brown)] mb-2">Status</div>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all outline-none font-bold text-sm uppercase tracking-widest shadow-lg ${isSaving ? 'bg-[var(--color-retro-brown)] text-[var(--color-retro-bg)]' : 'bg-[var(--color-retro-bg)] border hover:-translate-y-0.5 border-white/5 text-[var(--color-retro-text)] hover:bg-[var(--color-retro-brown)]'}`}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving…</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* Migration banner */}
+      <MigrationBanner onDone={() => refreshList()} />
+
+      {/* Upload progress */}
+      {uploadProgress && (uploadProgress.audio !== undefined || uploadProgress.sheet !== undefined) && isSaving && (
+        <div className="rounded-xl bg-black/20 px-4 py-3 flex items-center gap-3 text-xs">
+          <UploadIcon className="w-4 h-4 text-[var(--color-retro-teal)]" />
+          <div className="flex-1 space-y-1">
+            {uploadProgress.audio !== undefined && (
+              <div>
+                Audio: {Math.round(uploadProgress.audio * 100)}%
+                <div className="h-1 mt-0.5 rounded-full bg-black/30 overflow-hidden">
+                  <div className="h-full bg-[var(--color-retro-teal)]" style={{ width: `${Math.round(uploadProgress.audio * 100)}%` }} />
+                </div>
+              </div>
+            )}
+            {uploadProgress.sheet !== undefined && (
+              <div>
+                Sheet: {Math.round(uploadProgress.sheet * 100)}%
+                <div className="h-1 mt-0.5 rounded-full bg-black/30 overflow-hidden">
+                  <div className="h-full bg-[var(--color-retro-teal)]" style={{ width: `${Math.round(uploadProgress.sheet * 100)}%` }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="rounded-xl bg-rose-500/15 border border-rose-500/30 px-4 py-3 text-xs text-rose-300">
+          Save failed: {saveError}
+        </div>
+      )}
 
       <main className="flex-1 w-full mx-auto flex flex-col gap-4 lg:gap-6 lg:min-h-0 lg:overflow-hidden relative z-0">
         {/* Top/Middle Row: Sheet Viewer + Practice Notes */}
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 flex-1 lg:min-h-0 lg:overflow-hidden relative z-0">
           <div className="lg:flex-1 h-[65vh] lg:h-full rounded-2xl bg-[var(--color-retro-surface)] shadow-xl border-l-[12px] border-[var(--color-retro-teal)] flex flex-col z-0 overflow-hidden relative">
-            <SheetViewer sheetFile={sheetFile} onLoadFile={setSheetFile} />
+            <SheetViewer
+              sheetUrl={sheetUrl}
+              sheetMime={sheetMime}
+              sheetFilename={sheetFilename}
+              onLoadFile={(f) => setPendingSheetFile(f)}
+            />
           </div>
 
           <div className="lg:flex-1 h-[40vh] lg:h-full rounded-2xl bg-[var(--color-retro-surface)] shadow-xl border-l-[12px] border-[var(--color-retro-orange)] flex flex-col z-0 overflow-hidden relative">
@@ -247,9 +402,56 @@ export default function App() {
 
         {/* Bottom Row: Audio Player */}
         <div className="shrink-0 rounded-2xl bg-[var(--color-retro-surface)] shadow-xl border-l-[12px] border-[var(--color-retro-red)] flex flex-col relative z-0">
-          <AudioPlayer audioFile={audioFile} onLoadFile={setAudioFile} />
+          <AudioPlayer
+            audioUrl={audioUrl}
+            audioFilename={audioFilename}
+            onLoadFile={(f) => setPendingAudioFile(f)}
+          />
         </div>
       </main>
+
+      {showSettings && (
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          onTokenChanged={() => refreshList()}
+          onLocalCleared={() => refreshList()}
+        />
+      )}
+
+      {/* Delete confirm */}
+      {pendingDelete && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setPendingDelete(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl bg-[var(--color-retro-surface)] p-6 shadow-2xl border-l-[12px] border-[var(--color-retro-red)]"
+          >
+            <div className="flex items-start gap-2 mb-3">
+              <Trash2 className="w-5 h-5 text-[var(--color-retro-red)] shrink-0 mt-1" />
+              <h3 className="font-display text-xl">Delete piece?</h3>
+            </div>
+            <p className="text-sm opacity-90 mb-4">
+              Remove <strong>"{pendingDelete.name}"</strong> from the cloud? This affects every device.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setPendingDelete(null)}
+                className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(pendingDelete)}
+                className="px-4 py-2 rounded-full bg-[var(--color-retro-red)] text-[var(--color-retro-text)] font-bold uppercase tracking-widest text-[10px] hover:brightness-110"
+              >
+                Delete from cloud
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
