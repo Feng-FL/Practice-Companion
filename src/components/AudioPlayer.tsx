@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Upload, FileAudio, Repeat } from 'lucide-react';
+import IconButton from './ui/IconButton';
 
 interface Props {
   audioUrl: string | null;
@@ -94,24 +95,22 @@ export default function AudioPlayer({ audioUrl, audioFilename, onLoadFile }: Pro
   const displayName = audioFilename ? audioFilename.replace(/\.[^/.]+$/, '') : 'Current Track';
 
   return (
-    <div className="p-4 sm:p-5 flex flex-col justify-center h-full relative overflow-hidden text-[var(--color-retro-text)] min-h-[100px] lg:min-h-[120px]">
+    <div className="flex min-h-[76px] flex-col justify-center overflow-hidden rounded-2xl border border-app-border bg-app-surface px-4 py-3 shadow-[var(--app-shadow)] sm:px-5">
       {!audioUrl ? (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 z-10 w-full">
-          <div className="flex items-center gap-4 shrink-0">
-            <h2 className="text-[10px] uppercase font-sans tracking-[0.2em] text-[var(--color-retro-red)] font-bold block">
+        <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-app-text">
               Audio Tape
-            </h2>
+            </span>
+            <span className="hidden h-4 w-px bg-app-border sm:block" />
+            <span className="flex items-center gap-2 text-app-muted">
+              <FileAudio className="h-4 w-4 text-app-accent" />
+              <span className="text-[11px] uppercase tracking-[0.14em]">No Audio Tape</span>
+            </span>
           </div>
 
-          <div className="flex-1 w-full flex justify-center">
-            <div className="flex items-center justify-center gap-3 text-white/40">
-              <FileAudio className="w-5 h-5 text-[var(--color-retro-red)] opacity-50" />
-              <p className="text-[10px] uppercase font-sans tracking-widest font-bold">No Audio Tape</p>
-            </div>
-          </div>
-
-          <label className="cursor-pointer bg-[var(--color-retro-bg)] border border-white/5 hover:-translate-y-0.5 shadow hover:border-[var(--color-retro-red)] rounded-full px-5 py-2 text-[10px] uppercase font-sans tracking-widest font-bold transition-all flex items-center gap-2 shrink-0">
-            <Upload className="w-3 h-3 text-[var(--color-retro-red)]" />
+          <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl border border-app-border bg-app-raised px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-app-text transition-colors duration-150 hover:border-app-accent hover:bg-app-accent-soft">
+            <Upload className="h-3.5 w-3.5 text-app-accent" />
             Load File
             <input
               type="file"
@@ -122,21 +121,20 @@ export default function AudioPlayer({ audioUrl, audioFilename, onLoadFile }: Pro
           </label>
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-8 z-10 w-full">
-
-          {/* Header & Replace btn */}
-          <div className="flex flex-row lg:flex-col items-center lg:items-start justify-between w-full lg:w-[220px] shrink-0 gap-4 lg:gap-2">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-[10px] uppercase font-sans tracking-[0.2em] text-[var(--color-retro-red)] font-bold block mb-0.5 lg:mb-1">
+        <div className="flex flex-col items-center gap-3 lg:flex-row lg:gap-6">
+          {/* Track + replace */}
+          <div className="flex w-full min-w-0 items-center justify-between gap-3 lg:w-[220px] lg:shrink-0 lg:flex-col lg:items-start lg:gap-1">
+            <div className="min-w-0 flex-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-app-muted">
                 Audio Tape
-              </h2>
-              <div className="text-lg lg:text-xl font-display truncate text-white w-full" title={displayName}>
+              </span>
+              <span className="block truncate text-base font-semibold text-app-text" title={displayName}>
                 {displayName}
-              </div>
+              </span>
             </div>
 
-            <label className="cursor-pointer bg-white/5 border border-white/10 hover:bg-white/10 rounded-full px-4 py-1.5 text-[10px] uppercase font-sans tracking-widest font-bold transition-all flex items-center gap-2 shrink-0">
-              <Upload className="w-3 h-3 text-[var(--color-retro-red)]" />
+            <label className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-app-border bg-app-raised px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-app-text transition-colors duration-150 hover:border-app-accent hover:bg-app-accent-soft">
+              <Upload className="h-3.5 w-3.5 text-app-accent" />
               Replace
               <input
                 type="file"
@@ -156,53 +154,63 @@ export default function AudioPlayer({ audioUrl, audioFilename, onLoadFile }: Pro
             onEnded={() => !isLooping && setIsPlaying(false)}
           />
 
-          {/* Controls */}
-          <div className="flex items-center justify-center gap-4 sm:gap-6 shrink-0">
-            <button
+          {/* Transport */}
+          <div className="flex shrink-0 items-center justify-center gap-3 sm:gap-4">
+            <IconButton
+              label={isLooping ? 'Disable repeat' : 'Enable repeat'}
               onClick={() => setIsLooping(!isLooping)}
-              className={`transition-all ${isLooping ? 'text-[var(--color-retro-red)] scale-110 drop-shadow-[0_0_8px_rgba(205,78,86,0.6)]' : 'text-white/40 hover:text-white/80'}`}
-              title={isLooping ? "Disable Repeat" : "Enable Repeat"}
+              tone={isLooping ? 'accent' : 'default'}
+              className="h-9 w-9"
             >
-              <Repeat className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => { if(audioRef.current) audioRef.current.currentTime -= 5; }}
-              className="text-white/40 hover:text-white transition-colors"
-              title="-5 seconds"
+              <Repeat className="h-[18px] w-[18px]" />
+            </IconButton>
+            <IconButton
+              label="-5 seconds"
+              onClick={() => {
+                if (audioRef.current) audioRef.current.currentTime -= 5;
+              }}
+              className="h-9 w-9"
             >
-              <SkipBack className="w-6 h-6" />
-            </button>
+              <SkipBack className="h-[18px] w-[18px]" />
+            </IconButton>
             <button
               onClick={togglePlay}
-              className="w-14 h-14 rounded-full flex items-center justify-center text-white bg-[var(--color-retro-red)] hover:brightness-110 shadow-[0_0_20px_rgba(205,78,86,0.5)] hover:scale-105 transition-all"
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-app-accent text-app-on-accent transition-transform duration-150 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-surface"
             >
-              {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
+              {isPlaying ? (
+                <Pause className="h-5 w-5" />
+              ) : (
+                <Play className="ml-0.5 h-5 w-5" />
+              )}
             </button>
-            <button
-              onClick={() => { if(audioRef.current) audioRef.current.currentTime += 5; }}
-              className="text-white/40 hover:text-white transition-colors"
-              title="+5 seconds"
+            <IconButton
+              label="+5 seconds"
+              onClick={() => {
+                if (audioRef.current) audioRef.current.currentTime += 5;
+              }}
+              className="h-9 w-9"
             >
-              <SkipForward className="w-6 h-6" />
-            </button>
+              <SkipForward className="h-[18px] w-[18px]" />
+            </IconButton>
           </div>
 
-          {/* Progress Bar */}
-          <div className="flex-1 flex flex-col gap-2 w-full lg:w-auto mt-2 lg:mt-0">
+          {/* Progress */}
+          <div className="flex w-full flex-1 flex-col gap-1.5 lg:w-auto">
             <input
               type="range"
               min="0"
               max={duration || 100}
               value={progress}
               onChange={handleSeek}
-              className="w-full h-3 bg-white/5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[var(--color-retro-red)] [&::-webkit-slider-thumb]:rounded-full border border-white/10 focus:outline-none"
+              aria-label="Playback position"
+              className="pc-range"
             />
-            <div className="flex justify-between text-[10px] font-mono opacity-80 mt-1 text-white">
+            <div className="flex justify-between font-mono text-[10px] text-app-muted">
               <span>{formatTime(progress)}</span>
               <span>{formatTime(duration)}</span>
             </div>
           </div>
-
         </div>
       )}
     </div>

@@ -2,20 +2,23 @@ import { useState, useRef, useEffect } from 'react';
 import React from 'react';
 import { X, Lock, Trash2, Download, Upload, LogOut, Loader2, AlertTriangle } from 'lucide-react';
 import { useSyncToken } from '../hooks/useSyncToken';
-import { useSyncStatus } from '../hooks/useSyncStatus';
+import type { SyncStatus as SyncStatusData } from '../hooks/useSyncStatus';
 import { Store } from '../lib/store';
 import { SyncClient, SyncError } from '../lib/sync';
 import { triggerDownload, importZip } from '../lib/backup';
+import Button from './ui/Button';
+import IconButton from './ui/IconButton';
 
 interface Props {
   onClose: () => void;
   onTokenChanged?: () => void;
   onLocalCleared?: () => void;
+  /** Shared with the header pill so both read the same live poll. */
+  status: SyncStatusData;
 }
 
-export default function SettingsModal({ onClose, onTokenChanged, onLocalCleared }: Props) {
+export default function SettingsModal({ onClose, onTokenChanged, onLocalCleared, status }: Props) {
   const { token, setToken } = useSyncToken();
-  const [status] = useSyncStatus();
   const [tokenInput, setTokenInput] = useState('');
   const [tokenStatus, setTokenStatus] = useState<{ kind: 'idle' | 'testing' | 'ok' | 'fail'; msg?: string }>({ kind: 'idle' });
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -53,16 +56,14 @@ export default function SettingsModal({ onClose, onTokenChanged, onLocalCleared 
   const applyToken = async () => {
     setBusyKey('apply-token');
     await testToken();
-    if (tokenStatus.kind === 'ok' || true) {
-      // Re-fetch after the test (state from testToken may not have settled yet in some browsers)
-      try {
-        const c = new SyncClient(tokenInput);
-        await c.list();
-        setToken(tokenInput);
-        onTokenChanged?.();
-      } catch {
-        // already surfaced by testToken
-      }
+    // Re-fetch after the test (state from testToken may not have settled yet in some browsers)
+    try {
+      const c = new SyncClient(tokenInput);
+      await c.list();
+      setToken(tokenInput);
+      onTokenChanged?.();
+    } catch {
+      // already surfaced by testToken
     }
     setBusyKey(null);
   };
@@ -135,26 +136,29 @@ export default function SettingsModal({ onClose, onTokenChanged, onLocalCleared 
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg rounded-2xl bg-[var(--color-retro-surface)] shadow-2xl border-l-[12px] border-[var(--color-retro-brown)] max-h-[90vh] flex flex-col"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Settings"
+        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-[var(--app-shadow-lg)]"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-          <h2 className="text-2xl font-display tracking-wide">Settings</h2>
-          <button onClick={onClose} className="opacity-60 hover:opacity-100">
-            <X className="w-5 h-5" />
-          </button>
+        <div className="flex items-center justify-between border-b border-app-border-soft px-6 py-4">
+          <h2 className="text-lg font-semibold text-app-text">Settings</h2>
+          <IconButton label="Close settings" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </IconButton>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-7">
+        <div className="pc-scroll flex-1 space-y-7 overflow-y-auto px-6 py-5">
           {/* Token */}
           <section>
-            <div className="flex items-center gap-2 mb-3">
-              <Lock className="w-4 h-4 text-[var(--color-retro-brown)]" />
-              <h3 className="text-[10px] uppercase tracking-widest font-bold text-[var(--color-retro-brown)]">
+            <div className="mb-3 flex items-center gap-2">
+              <Lock className="h-4 w-4 text-app-accent" />
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-app-text">
                 Sync token
               </h3>
             </div>
@@ -163,80 +167,83 @@ export default function SettingsModal({ onClose, onTokenChanged, onLocalCleared 
               value={tokenInput}
               onChange={(e) => { setTokenInput(e.target.value); setTokenStatus({ kind: 'idle' }); }}
               placeholder={token ? '•••••••• (set) — paste a new one to change' : 'Paste your sync token'}
-              className="w-full px-4 py-2.5 rounded-lg bg-black/20 border-2 border-transparent focus:border-[var(--color-retro-brown)] outline-none font-mono text-sm"
+              aria-label="Sync token"
+              className="w-full rounded-xl border border-app-border bg-app-sunken px-4 py-2.5 font-mono text-sm text-app-text outline-none transition-colors placeholder:text-app-muted focus:border-app-accent focus:bg-app-raised"
             />
             {tokenStatus.kind !== 'idle' && tokenStatus.msg && (
               <div
-                className={`mt-2 text-xs flex items-start gap-1.5 ${
-                  tokenStatus.kind === 'ok' ? 'text-emerald-400' :
-                  tokenStatus.kind === 'fail' ? 'text-rose-400' :
-                  'opacity-70'
+                className={`mt-2 flex items-start gap-1.5 text-xs ${
+                  tokenStatus.kind === 'ok'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : tokenStatus.kind === 'fail'
+                      ? 'text-app-danger'
+                      : 'text-app-muted'
                 }`}
               >
-                {tokenStatus.kind === 'testing' && <Loader2 className="w-3 h-3 mt-0.5 animate-spin" />}
+                {tokenStatus.kind === 'testing' && <Loader2 className="mt-0.5 h-3 w-3 animate-spin" />}
                 {tokenStatus.kind === 'ok' && <span>✓ {tokenStatus.msg}</span>}
                 {tokenStatus.kind === 'fail' && <span>✗ {tokenStatus.msg}</span>}
               </div>
             )}
             <div className="mt-3 flex gap-2">
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={testToken}
                 disabled={!tokenInput.trim() || tokenStatus.kind === 'testing'}
-                className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest font-bold disabled:opacity-40"
               >
                 Test
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={applyToken}
                 disabled={!tokenInput.trim() || busyKey === 'apply-token'}
-                className="px-4 py-2 rounded-full bg-[var(--color-retro-brown)] text-[var(--color-retro-text)] font-bold uppercase tracking-widest text-[10px] hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5"
               >
-                {busyKey === 'apply-token' && <Loader2 className="w-3 h-3 animate-spin" />}
+                {busyKey === 'apply-token' && <Loader2 className="h-3 w-3 animate-spin" />}
                 Update
-              </button>
+              </Button>
             </div>
           </section>
 
           {/* Status */}
           <section>
-            <h3 className="text-[10px] uppercase tracking-widest font-bold text-[var(--color-retro-brown)] mb-2">
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-app-text">
               Cloud status
             </h3>
-            <div className="rounded-lg bg-black/20 px-4 py-3 text-sm font-mono">
-              <div>State: <span className="opacity-80">{status.state}</span></div>
-              <div>Items in cloud: <span className="opacity-80">{status.itemCount}</span></div>
-              <div>Last synced: <span className="opacity-80">{status.lastSuccessAt ? new Date(status.lastSuccessAt).toLocaleTimeString() : 'never'}</span></div>
+            <div className="rounded-xl border border-app-border bg-app-sunken px-4 py-3 font-mono text-xs text-app-muted">
+              <div>State: <span className="text-app-text">{status.state}</span></div>
+              <div>Items in cloud: <span className="text-app-text">{status.itemCount}</span></div>
+              <div>
+                Last synced:{' '}
+                <span className="text-app-text">
+                  {status.lastSuccessAt ? new Date(status.lastSuccessAt).toLocaleTimeString() : 'never'}
+                </span>
+              </div>
               {status.lastErrorMessage && (
-                <div className="text-rose-400 mt-1">Last error: {status.lastErrorMessage}</div>
+                <div className="mt-1 text-app-danger">Last error: {status.lastErrorMessage}</div>
               )}
             </div>
           </section>
 
           {/* Backup */}
           <section>
-            <h3 className="text-[10px] uppercase tracking-widest font-bold text-[var(--color-retro-brown)] mb-2">
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-app-text">
               Backup
             </h3>
-            <p className="text-xs opacity-70 mb-3">
-              Save a local .zip with every MP3, PDF, and notes. Independent of the cloud — use to migrate to a new machine or as paranoia.
+            <p className="mb-3 text-xs leading-relaxed text-app-muted">
+              Save a local .zip with every MP3, PDF, and notes. Independent of the cloud — use to
+              migrate to a new machine or as paranoia.
             </p>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={exportZip}
-                disabled={busyKey === 'export'}
-                className="px-4 py-2 rounded-full bg-[var(--color-retro-teal)] text-[var(--color-retro-bg)] font-bold uppercase tracking-widest text-[10px] hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {busyKey === 'export' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" size="sm" onClick={exportZip} disabled={busyKey === 'export'}>
+                {busyKey === 'export' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
                 Export .zip
-              </button>
-              <button
-                onClick={importZipClick}
-                disabled={busyKey === 'import'}
-                className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest font-bold flex items-center gap-1.5"
-              >
-                {busyKey === 'import' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={importZipClick} disabled={busyKey === 'import'}>
+                {busyKey === 'import' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
                 Import .zip
-              </button>
+              </Button>
               <input
                 ref={importFileRef}
                 type="file"
@@ -246,43 +253,42 @@ export default function SettingsModal({ onClose, onTokenChanged, onLocalCleared 
               />
             </div>
             {flash && (
-              <div className="mt-3 text-xs px-3 py-2 rounded bg-black/30">{flash}</div>
+              <div className="mt-3 rounded-lg bg-app-sunken px-3 py-2 text-xs text-app-text">{flash}</div>
             )}
           </section>
 
           {/* Local cache */}
           <section>
-            <h3 className="text-[10px] uppercase tracking-widest font-bold text-[var(--color-retro-brown)] mb-2">
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-app-text">
               Local cache
             </h3>
-            <p className="text-xs opacity-70 mb-3">
-              The app mirrors cloud items to IndexedDB so it works offline. Clear only when you're sure the cloud has everything.
+            <p className="mb-3 text-xs leading-relaxed text-app-muted">
+              The app mirrors cloud items to IndexedDB so it works offline. Clear only when you're
+              sure the cloud has everything.
             </p>
-            <button
+            <Button
+              variant="danger"
+              size="sm"
               onClick={requestClearCache}
               disabled={busyKey === 'check-clear' || busyKey === 'clear'}
-              className="px-4 py-2 rounded-full bg-[var(--color-retro-red)] text-[var(--color-retro-text)] font-bold uppercase tracking-widest text-[10px] hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5"
             >
-              {busyKey === 'check-clear' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+              {busyKey === 'check-clear' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
               Free local cache
-            </button>
+            </Button>
           </section>
 
           {/* Sign out */}
           <section>
-            <h3 className="text-[10px] uppercase tracking-widest font-bold text-[var(--color-retro-brown)] mb-2">
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-app-text">
               Sign out
             </h3>
-            <p className="text-xs opacity-70 mb-3">
+            <p className="mb-3 text-xs leading-relaxed text-app-muted">
               Removes the sync token from this browser. Cloud data is untouched.
             </p>
-            <button
-              onClick={signOut}
-              className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest font-bold flex items-center gap-1.5"
-            >
-              <LogOut className="w-3 h-3" />
+            <Button variant="secondary" size="sm" onClick={signOut}>
+              <LogOut className="h-3 w-3" />
               Sign out
-            </button>
+            </Button>
           </section>
         </div>
       </div>
@@ -290,42 +296,40 @@ export default function SettingsModal({ onClose, onTokenChanged, onLocalCleared 
       {/* Confirm-clear modal */}
       {confirmClear && (
         <div
-          className="fixed inset-0 z-[110] bg-black/70 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/65 p-4"
           onClick={() => setConfirmClear(null)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl bg-[var(--color-retro-surface)] p-6 shadow-2xl border-l-[12px] border-[var(--color-retro-red)]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Free local cache?"
+            className="w-full max-w-sm rounded-2xl border border-app-border bg-app-surface p-6 shadow-[var(--app-shadow-lg)]"
           >
-            <div className="flex items-start gap-2 mb-3">
-              <AlertTriangle className="w-5 h-5 text-[var(--color-retro-red)] shrink-0 mt-1" />
-              <h3 className="font-display text-xl">Free local cache?</h3>
+            <div className="mb-3 flex items-start gap-2">
+              <AlertTriangle className="mt-1 h-5 w-5 shrink-0 text-app-danger" />
+              <h3 className="text-lg font-semibold text-app-text">Free local cache?</h3>
             </div>
-            <p className="text-sm opacity-90 mb-2">
-              This deletes <strong>{confirmClear.idbCount}</strong> IndexedDB item{confirmClear.idbCount === 1 ? '' : 's'}.
-              The cloud currently holds <strong>{confirmClear.cloudCount}</strong> item{confirmClear.cloudCount === 1 ? '' : 's'}.
+            <p className="mb-2 text-sm leading-relaxed text-app-muted">
+              This deletes <strong className="text-app-text">{confirmClear.idbCount}</strong> IndexedDB
+              item{confirmClear.idbCount === 1 ? '' : 's'}. The cloud currently holds{' '}
+              <strong className="text-app-text">{confirmClear.cloudCount}</strong> item
+              {confirmClear.cloudCount === 1 ? '' : 's'}.
             </p>
             {confirmClear.cloudCount < confirmClear.idbCount && (
-              <p className="text-sm text-rose-400 mb-3">
-                <strong>Warning:</strong> the cloud has fewer items than your local cache. Freeing will lose data.
-                Migrate first (run migration again from the main view).
+              <p className="mb-3 text-sm text-app-danger">
+                <strong>Warning:</strong> the cloud has fewer items than your local cache. Freeing will
+                lose data. Migrate first (run migration again from the main view).
               </p>
             )}
-            <div className="flex gap-2 justify-end mt-4">
-              <button
-                onClick={() => setConfirmClear(null)}
-                className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest font-bold"
-              >
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setConfirmClear(null)}>
                 Cancel
-              </button>
-              <button
-                onClick={confirmAndClear}
-                disabled={busyKey === 'clear'}
-                className="px-4 py-2 rounded-full bg-[var(--color-retro-red)] text-[var(--color-retro-text)] font-bold uppercase tracking-widest text-[10px] hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {busyKey === 'clear' && <Loader2 className="w-3 h-3 animate-spin" />}
+              </Button>
+              <Button variant="danger" size="sm" onClick={confirmAndClear} disabled={busyKey === 'clear'}>
+                {busyKey === 'clear' && <Loader2 className="h-3 w-3 animate-spin" />}
                 Free cache
-              </button>
+              </Button>
             </div>
           </div>
         </div>

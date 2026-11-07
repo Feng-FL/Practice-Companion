@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import { Music, Loader2, AlertTriangle } from 'lucide-react';
 import { SyncClient, SyncError } from '../lib/sync';
 import { useSyncToken } from '../hooks/useSyncToken';
+import Button from './ui/Button';
 
 export default function TokenGate() {
   const { setToken } = useSyncToken();
@@ -41,25 +42,25 @@ export default function TokenGate() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-retro-bg)] text-[var(--color-retro-text)] font-sans flex items-center justify-center p-6">
+    <div className="flex min-h-screen items-center justify-center bg-app-bg p-6">
       <form
         onSubmit={submit}
-        className="w-full max-w-md rounded-2xl bg-[var(--color-retro-surface)] p-8 shadow-xl border-l-[12px] border-[var(--color-retro-brown)]"
+        className="w-full max-w-md rounded-2xl border border-app-border bg-app-surface p-8 shadow-[var(--app-shadow-lg)]"
       >
-        <div className="flex items-center gap-2 mb-2">
-          <Music className="w-5 h-5 text-[var(--color-retro-brown)]" />
-          <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-[var(--color-retro-brown)]">
+        <div className="mb-3 flex items-center gap-2">
+          <Music className="h-4 w-4 text-app-accent" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-app-text">
             Practice Companion
           </span>
         </div>
-        <h1 className="text-3xl font-display tracking-wide mb-3">
+        <h1 className="mb-3 text-2xl font-semibold tracking-tight text-app-text">
           Connect to the cloud
         </h1>
-        <p className="text-sm opacity-80 mb-6 leading-relaxed">
-          Paste the <code className="px-1.5 py-0.5 rounded bg-black/20 font-mono text-xs">SYNC_TOKEN</code> you set in Vercel.
-          It is stored in this browser's localStorage so future visits skip this step.
+        <p className="mb-6 text-sm leading-relaxed text-app-muted">
+          Paste the <code className="rounded bg-app-sunken px-1.5 py-0.5 font-mono text-xs text-app-text">SYNC_TOKEN</code> you set
+          in Vercel. It is stored in this browser's localStorage so future visits skip this step.
         </p>
-        <label className="block text-[10px] uppercase font-bold tracking-widest opacity-60 mb-2">
+        <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-app-muted">
           Sync token
         </label>
         <input
@@ -70,28 +71,25 @@ export default function TokenGate() {
           autoComplete="off"
           spellCheck={false}
           placeholder="paste the token from your Vercel env"
-          className="w-full px-4 py-3 rounded-lg bg-black/20 border-2 border-transparent focus:border-[var(--color-retro-brown)] outline-none font-mono text-sm"
+          aria-label="Sync token"
+          className="w-full rounded-xl border border-app-border bg-app-sunken px-4 py-3 font-mono text-sm text-app-text outline-none transition-colors placeholder:text-app-muted focus:border-app-accent focus:bg-app-raised"
         />
         {err && (
-          <div className="mt-4 flex items-start gap-2 text-[var(--color-retro-red)] text-xs">
-            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          <div className="mt-4 flex items-start gap-2 text-xs text-app-danger">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{err}</span>
           </div>
         )}
-        <button
-          type="submit"
-          disabled={busy}
-          className="mt-6 w-full px-6 py-3 rounded-full bg-[var(--color-retro-brown)] text-[var(--color-retro-text)] font-bold uppercase tracking-widest text-sm shadow-lg hover:brightness-110 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-        >
+        <Button type="submit" variant="primary" disabled={busy} className="mt-6 w-full" tracked={false}>
           {busy ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
               Connecting…
             </>
           ) : (
             'Connect'
           )}
-        </button>
+        </Button>
       </form>
     </div>
   );

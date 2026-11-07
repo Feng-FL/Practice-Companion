@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { Upload, X, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { maybeRunMigration, getMigrationFlag, clearMigrationFlag, MigrationProgress } from '../lib/migrate';
 import { Store } from '../lib/store';
+import Button from './ui/Button';
+import IconButton from './ui/IconButton';
 
 interface Props {
   onDone: () => void;
@@ -64,48 +66,42 @@ export default function MigrationBanner({ onDone }: Props) {
       : 0;
 
   return (
-    <div className="rounded-xl border-2 border-[var(--color-retro-brown)] bg-black/20 px-4 py-3 flex items-center gap-3 flex-wrap">
-      <div className="flex items-center gap-2 shrink-0">
-        <Upload className="w-4 h-4 text-[var(--color-retro-brown)]" />
-        <span className="font-bold uppercase tracking-widest text-[10px]">
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3">
+      <div className="flex shrink-0 items-center gap-2">
+        <Upload className="h-4 w-4 text-app-accent" />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-app-text">
           Cloud Migration
         </span>
       </div>
 
       {phase === 'idle' && (
         <>
-          <span className="text-sm opacity-90">
-            Found <strong>{idbCount}</strong> score{idbCount === 1 ? '' : 's'} on this device. Upload {idbCount === 1 ? 'it' : 'them'} to the cloud so other devices can see {idbCount === 1 ? 'it' : 'them'}?
+          <span className="text-sm text-app-muted">
+            Found <strong className="text-app-text">{idbCount}</strong> score{idbCount === 1 ? '' : 's'} on this
+            device. Upload {idbCount === 1 ? 'it' : 'them'} to the cloud so other devices can see{' '}
+            {idbCount === 1 ? 'it' : 'them'}?
           </span>
           <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => run(false)}
-              className="px-4 py-1.5 rounded-full bg-[var(--color-retro-brown)] text-[var(--color-retro-text)] font-bold uppercase tracking-widest text-[10px] hover:brightness-110"
-            >
+            <Button variant="primary" size="sm" onClick={() => run(false)}>
               Migrate
-            </button>
-            <button
-              type="button"
-              onClick={skip}
-              className="px-4 py-1.5 rounded-full hover:bg-white/5 text-[10px] uppercase tracking-widest opacity-70 hover:opacity-100"
-            >
+            </Button>
+            <Button variant="ghost" size="sm" onClick={skip}>
               Already on cloud
-            </button>
+            </Button>
           </div>
         </>
       )}
 
       {isMigrating && (
         <>
-          <div className="flex-1 min-w-[200px]">
-            <div className="text-xs opacity-80 mb-1">
+          <div className="min-w-[200px] flex-1">
+            <div className="mb-1 text-xs text-app-muted">
               Uploading {progress?.done ?? 0} of {progress?.total ?? idbCount}
               {progress?.currentName ? ` — ${progress.currentName}` : ''}
             </div>
-            <div className="h-1.5 rounded-full bg-black/30 overflow-hidden">
+            <div className="h-1.5 overflow-hidden rounded-full bg-app-sunken">
               <div
-                className="h-full bg-[var(--color-retro-teal)] transition-all"
+                className="h-full bg-app-accent transition-all"
                 style={{ width: pct + '%' }}
               />
             </div>
@@ -115,51 +111,39 @@ export default function MigrationBanner({ onDone }: Props) {
 
       {phase === 'finished' && summary && (
         <>
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span className="text-sm opacity-90">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-sm text-app-muted">
             Migrated {summary.migrated}, skipped {summary.skipped}
             {summary.failed > 0 ? `, ${summary.failed} failed` : ''}.
           </span>
           <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => { setPhase('idle'); setSummary(null); }}
-              className="px-3 py-1.5 rounded-full hover:bg-white/5 text-[10px] uppercase tracking-widest opacity-70 hover:opacity-100 flex items-center gap-1"
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className="h-3 w-3" />
               Run again
-            </button>
-            <button
-              type="button"
-              onClick={() => setDismissed(true)}
-              className="px-3 py-1.5 rounded-full hover:bg-white/5 text-[10px] uppercase tracking-widest opacity-70 hover:opacity-100"
-            >
-              <X className="w-3 h-3" />
-            </button>
+            </Button>
+            <IconButton label="Dismiss" onClick={() => setDismissed(true)} className="h-8 w-8">
+              <X className="h-4 w-4" />
+            </IconButton>
           </div>
         </>
       )}
 
       {phase === 'error' && (
         <>
-          <AlertTriangle className="w-4 h-4 text-rose-400" />
-          <span className="text-sm">Migration failed. Check the console for details.</span>
+          <AlertTriangle className="h-4 w-4 text-app-danger" />
+          <span className="text-sm text-app-muted">Migration failed. Check the console for details.</span>
           <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => run(true)}
-              className="px-3 py-1.5 rounded-full hover:bg-white/5 text-[10px] uppercase tracking-widest opacity-70 hover:opacity-100 flex items-center gap-1"
-            >
-              <RefreshCw className="w-3 h-3" />
+            <Button variant="ghost" size="sm" onClick={() => run(true)}>
+              <RefreshCw className="h-3 w-3" />
               Retry
-            </button>
-            <button
-              type="button"
-              onClick={() => setDismissed(true)}
-              className="px-3 py-1.5 rounded-full hover:bg-white/5 text-[10px] uppercase tracking-widest opacity-70 hover:opacity-100"
-            >
-              <X className="w-3 h-3" />
-            </button>
+            </Button>
+            <IconButton label="Dismiss" onClick={() => setDismissed(true)} className="h-8 w-8">
+              <X className="h-4 w-4" />
+            </IconButton>
           </div>
         </>
       )}

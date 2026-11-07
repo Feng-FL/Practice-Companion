@@ -1,57 +1,68 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { MUSICAL_KEYS } from '../lib/keys';
 
-export default function PracticeNotes({ 
-  notes, 
+export default function PracticeNotes({
+  notes,
   onChange,
   musicalKeys = [],
-  onKeyToggle
-}: { 
+  onKeyToggle,
+  headerAction,
+}: {
   notes: string;
   onChange: (n: string) => void;
   musicalKeys?: string[];
   onKeyToggle?: (key: string) => void;
+  /** Extra control rendered on the far right of the title row. */
+  headerAction?: React.ReactNode;
 }) {
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange(e.target.value);
   };
 
-  const KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'bB', 'bA', '#F', '#C', 'bE'];
-
   return (
-    <div className="p-5 sm:p-6 flex-1 flex flex-col h-full relative text-[var(--color-retro-text)]">
-      <div className="flex justify-between items-center mb-3 sm:mb-4">
-        <span className="text-[10px] font-sans uppercase tracking-[0.2em] font-bold text-[var(--color-retro-orange)] shrink-0">Practice Notes</span>
-        
-        {onKeyToggle && (
-          <div className="flex flex-wrap gap-1 bg-black/20 p-1.5 rounded-xl ml-2 justify-end">
-            {KEYS.map(k => {
-              const isActive = musicalKeys.includes(k);
-              return (
-                <button 
-                  key={k}
-                  onClick={() => onKeyToggle(k)}
-                  className={`min-w-[24px] h-6 px-1 sm:h-7 rounded text-[10px] sm:text-xs font-bold font-sans flex items-center justify-center transition-all ${
-                    isActive 
-                      ? 'bg-[var(--color-retro-orange)] text-[var(--color-retro-bg)] shadow-[0_0_10px_rgba(222,109,56,0.6)] scale-105' 
-                      : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/80'
-                  }`}
-                  title={k}
-                >
-                  {k}
-                </button>
-              );
-            })}
-          </div>
-        )}
+    <div className="flex h-full min-h-0 flex-col p-4 sm:p-5">
+      <div className="mb-3 flex items-center gap-3">
+        <h2 className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.18em] text-app-text">
+          Practice Notes
+        </h2>
+        <div className="h-px flex-1 bg-app-border-soft" />
+        {headerAction}
       </div>
 
-      <div className="flex-1 relative flex flex-col h-full bg-[var(--color-retro-bg)]/50 rounded-xl border border-white/5 p-4 sm:p-6 shadow-inner">
+      {onKeyToggle && (
+        <div className="pc-scroll -mx-1 mb-3 flex gap-1 overflow-x-auto px-1 pb-1">
+          {MUSICAL_KEYS.map((k) => {
+            const isActive = musicalKeys.includes(k);
+            return (
+              <button
+                key={k}
+                onClick={() => onKeyToggle(k)}
+                title={k}
+                aria-pressed={isActive}
+                className={[
+                  'inline-flex h-7 min-w-[28px] shrink-0 items-center justify-center rounded-lg px-2',
+                  'text-[11px] font-semibold leading-none transition-colors duration-150 outline-none',
+                  'focus-visible:ring-2 focus-visible:ring-app-accent',
+                  isActive
+                    ? 'bg-app-accent text-app-on-accent'
+                    : 'bg-app-sunken text-app-muted hover:text-app-text',
+                ].join(' ')}
+              >
+                {k}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-app-border bg-app-sunken p-3 sm:p-4">
         <textarea
           value={notes}
           onChange={handleChange}
           spellCheck={false}
           placeholder="Start typing notes..."
-          className="w-full flex-1 bg-transparent text-[var(--color-retro-text)] placeholder:opacity-30 placeholder:italic font-sans font-medium leading-relaxed text-base resize-none focus:outline-none"
+          aria-label="Practice notes"
+          className="min-h-0 w-full flex-1 resize-none bg-transparent text-sm leading-relaxed text-app-text outline-none placeholder:italic placeholder:text-app-muted"
         />
       </div>
     </div>

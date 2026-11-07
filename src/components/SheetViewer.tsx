@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, Image as ImageIcon, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Move } from 'lucide-react';
+import { Upload, Image as ImageIcon, ChevronLeft, ChevronRight, Move } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import Button from './ui/Button';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
@@ -46,7 +47,7 @@ export default function SheetViewer({ sheetUrl, sheetMime, sheetFilename, onLoad
         if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
           setContainerSize({
             width: entry.contentRect.width - 16,
-            height: entry.contentRect.height - 16
+            height: entry.contentRect.height - 16,
           });
         }
       }
@@ -72,30 +73,38 @@ export default function SheetViewer({ sheetUrl, sheetMime, sheetFilename, onLoad
   };
 
   const toggleFitMode = () => {
-    setFitMode(prev => prev === 'page' ? 'width' : 'page');
+    setFitMode((prev) => (prev === 'page' ? 'width' : 'page'));
   };
 
   return (
-    <section className="flex-1 flex flex-col overflow-hidden relative h-full w-full text-[var(--color-retro-text)]">
-      {/* Absolute Header Overlay */}
-      <div className="absolute top-0 left-0 right-0 p-4 lg:p-6 flex justify-between items-center z-20 pointer-events-none">
-        <div className="hidden md:block px-5 py-2 bg-[var(--color-retro-teal)] text-[var(--color-retro-bg)] rounded-full text-[10px] uppercase font-sans tracking-[0.2em] font-bold pointer-events-auto shadow-md">
+    <section className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-[var(--app-shadow)]">
+      {/* Toolbar */}
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-app-border-soft px-4 py-3 sm:gap-3 sm:px-5">
+        <h2 className="shrink-0 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.18em] text-app-text">
           Master Score
-        </div>
+        </h2>
 
-        <div className="flex items-center gap-2 lg:gap-4 pointer-events-auto ml-auto">
+        <div className="flex shrink-0 items-center gap-2">
           {sheetUrl && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={toggleFitMode}
-              className="px-4 py-2 bg-[var(--color-retro-bg)]/80 backdrop-blur-md rounded-full shadow-lg border border border-white/5 hover:-translate-y-0.5 hover:border-[var(--color-retro-teal)] text-[var(--color-retro-text)] text-[10px] uppercase tracking-widest font-sans font-bold transition-all flex items-center gap-2"
-              title="Toggle Fit Mode"
+              tracked={false}
+              aria-label={fitMode === 'page' ? 'Fit width' : 'Fit page'}
+              className="px-2.5 sm:px-3"
             >
-              {fitMode === 'page' ? <><Move className="w-3 h-3 text-[var(--color-retro-teal)]" /> Fit Width</> : <><ZoomOut className="w-3 h-3 text-[var(--color-retro-teal)]" /> Fit Page</>}
-            </button>
+              <Move className="h-3.5 w-3.5 text-app-accent" />
+              <span className="hidden whitespace-nowrap sm:inline">
+                {fitMode === 'page' ? 'Fit width' : 'Fit page'}
+              </span>
+            </Button>
           )}
-          <label className="cursor-pointer px-5 py-2 bg-[var(--color-retro-bg)] border hover:-translate-y-0.5 border-white/5 hover:border-[var(--color-retro-teal)] rounded-full shadow-lg text-[10px] uppercase font-sans tracking-widest font-bold transition-all flex items-center gap-2">
-            <Upload className="w-3 h-3 text-[var(--color-retro-teal)]" />
-            Load Score
+          <label className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-xl border border-app-border bg-app-raised px-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-app-text transition-colors duration-150 hover:border-app-accent hover:bg-app-accent-soft sm:px-3">
+            <Upload className="h-3.5 w-3.5 shrink-0 text-app-accent" />
+            <span className="whitespace-nowrap">
+              Load<span className="hidden sm:inline"> Score</span>
+            </span>
             <input
               type="file"
               accept="image/*,application/pdf"
@@ -106,81 +115,96 @@ export default function SheetViewer({ sheetUrl, sheetMime, sheetFilename, onLoad
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden p-2 lg:p-6 flex flex-col pt-16 lg:pt-20 relative">
-        <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(var(--color-retro-text)_1px,transparent_1px)] [background-size:24px_24px]"></div>
+      {/* Canvas */}
+      <div className="pc-sheet-grid relative flex min-h-0 flex-1 flex-col overflow-hidden bg-app-sunken p-3 sm:p-5">
         {sheetUrl ? (
-          <div className="w-full flex-1 max-w-6xl mx-auto rounded-xl border border-white/5 bg-white/5 p-2 shadow-inner relative flex flex-col overflow-hidden z-10">
+          <div className="relative mx-auto flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-app-border bg-app-raised shadow-[var(--app-shadow)]">
             <div
               ref={containerRef}
-              className={`flex-1 w-full h-full relative group rounded-lg ${fitMode === 'page' ? 'overflow-hidden flex items-center justify-center' : 'overflow-y-auto overflow-x-hidden'}`}
+              className={`group relative flex h-full w-full flex-1 ${
+                fitMode === 'page'
+                  ? 'items-center justify-center overflow-hidden'
+                  : 'overflow-y-auto overflow-x-hidden'
+              }`}
             >
               {fileType === 'image' ? (
                 <img
                   src={sheetUrl}
                   alt="Sheet Music"
-                  className={fitMode === 'page' ? 'absolute w-full h-full object-contain' : 'w-full h-auto block rounded'}
+                  className={
+                    fitMode === 'page'
+                      ? 'absolute h-full w-full object-contain'
+                      : 'block h-auto w-full'
+                  }
                 />
               ) : (
                 <Document
                   file={sheetUrl}
                   onLoadSuccess={onDocumentLoadSuccess}
                   onLoadError={(error) => setPdfError(error.message)}
-                  className={`flex flex-col items-center w-full min-h-full ${fitMode === 'page' ? 'justify-center h-full' : 'justify-start'}`}
+                  className={`flex w-full flex-col items-center ${
+                    fitMode === 'page' ? 'h-full justify-center' : 'min-h-full justify-start'
+                  }`}
                   loading={
-                    <div className="text-[10px] uppercase font-bold tracking-widest font-sans text-[var(--color-retro-teal)] italic h-64 flex items-center justify-center drop-shadow-md">
-                      Loading PDF...
+                    <div className="flex h-64 items-center justify-center font-mono text-[10px] uppercase tracking-[0.2em] text-app-muted">
+                      Loading PDF…
                     </div>
                   }
                   error={
-                    <div className="text-[10px] uppercase font-bold tracking-widest text-red-500 flex flex-col items-center justify-center p-8 text-center max-w-sm mx-auto">
-                      <p className="mb-2">Failed to load PDF</p>
-                      <p className="opacity-60">{pdfError || "Unknown error"}</p>
+                    <div className="mx-auto flex max-w-sm flex-col items-center justify-center p-8 text-center">
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-app-danger">
+                        Failed to load PDF
+                      </p>
+                      <p className="text-xs text-app-muted">{pdfError || 'Unknown error'}</p>
                     </div>
                   }
                 >
                   {containerSize.width > 0 && (
-                     <Page
-                       pageNumber={pageNumber}
-                       width={fitMode === 'width' ? containerSize.width : undefined}
-                       height={fitMode === 'page' ? containerSize.height : undefined}
-                       className="border border-white/10 bg-[#f4ece0] shadow-2xl rounded"
-                       renderTextLayer={false}
-                       renderAnnotationLayer={false}
-                       loading=""
-                     />
+                    <Page
+                      pageNumber={pageNumber}
+                      width={fitMode === 'width' ? containerSize.width : undefined}
+                      height={fitMode === 'page' ? containerSize.height : undefined}
+                      className="rounded-sm bg-white shadow-[var(--app-shadow-lg)]"
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                      loading=""
+                    />
                   )}
                 </Document>
               )}
 
               {fileType === 'pdf' && numPages && numPages > 1 && (
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[var(--color-retro-bg)]/90 backdrop-blur-md rounded-full p-2 shadow-xl border border-white/10 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-app-border bg-app-raised p-1.5 shadow-[var(--app-shadow)]">
                   <button
                     onClick={() => setPageNumber(Math.max(1, pageNumber - 1))}
                     disabled={pageNumber <= 1}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-[var(--color-retro-teal)] hover:text-white transition-colors disabled:opacity-30 disabled:hover:bg-white/10 disabled:cursor-not-allowed"
+                    aria-label="Previous page"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-app-muted transition-colors hover:bg-app-sunken hover:text-app-text disabled:opacity-30"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="h-4 w-4" />
                   </button>
-                  <span className="text-[10px] font-mono tabular-nums px-3 font-bold text-white opacity-80">
+                  <span className="px-2 font-mono text-[11px] font-semibold tabular-nums text-app-text">
                     {pageNumber} / {numPages}
                   </span>
                   <button
                     onClick={() => setPageNumber(Math.min(numPages || 1, pageNumber + 1))}
                     disabled={pageNumber >= (numPages || 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-[var(--color-retro-teal)] hover:text-white transition-colors disabled:opacity-30 disabled:hover:bg-white/10 disabled:cursor-not-allowed"
+                    aria-label="Next page"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-app-muted transition-colors hover:bg-app-sunken hover:text-app-text disabled:opacity-30"
                   >
-                     <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="max-w-[400px] w-full border border-white/5 rounded-2xl bg-[var(--color-retro-bg)] shadow-md relative text-center mx-auto my-auto z-10 p-12 overflow-hidden block">
-             <div className="absolute top-4 right-6 text-[10px] font-sans uppercase tracking-widest opacity-20">No Score Linked</div>
-             <ImageIcon className="w-12 h-12 opacity-20 mx-auto mb-6 text-[var(--color-retro-teal)]" />
-             <h3 className="font-display text-2xl mb-4 text-white opacity-90 tracking-wide">Awaiting Score</h3>
-             <p className="text-sm opacity-50 font-sans leading-relaxed">Load a PDF or Image of your sheet music to begin the session.</p>
+          <div className="mx-auto my-auto w-full max-w-sm rounded-2xl border border-app-border bg-app-surface p-10 text-center shadow-[var(--app-shadow)]">
+            <ImageIcon className="mx-auto mb-5 h-11 w-11 text-app-accent" />
+            <h3 className="mb-2 text-lg font-semibold text-app-text">Awaiting Score</h3>
+            <p className="text-sm leading-relaxed text-app-muted">
+              Load a PDF or image of your sheet music to begin the session.
+            </p>
           </div>
         )}
       </div>
