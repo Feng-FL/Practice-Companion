@@ -36,6 +36,15 @@ function clientOrThrow(): SyncClient {
 // We mirror cloud-loaded items here so the app can boot in offline mode.
 // Keys starting with `_` are skipped by getAllItems() in the migration script.
 
+// Entries written by the pre-cloud version carry the actual File blobs under
+// `audioFile` / `sheetFile`. They are the user's only copy of that audio or
+// sheet until it reaches R2, so they must survive any cache rewrite.
+function hasLocalBlobs(item: unknown): boolean {
+  const v = item as { audioFile?: unknown; sheetFile?: unknown } | null;
+  if (!v) return false;
+  return v.audioFile instanceof Blob || v.sheetFile instanceof Blob;
+}
+
 async function writeIdbCache(items: LoadedItem[]): Promise<void> {
   // Read all current keys, drop ones starting with `_`, replace.
   const allKeys: IDBValidKey[] = [];
@@ -47,10 +56,27 @@ async function writeIdbCache(items: LoadedItem[]): Promise<void> {
   } while (false && cursor !== 0); // unrolled for clarity
   const reservedKeys = allKeys.filter((k) => typeof k === 'string' && (k as string).startsWith('_'));
   const itemKeys = allKeys.filter((k) => typeof k === 'string' && !(k as string).startsWith('_'));
-  await Promise.all(itemKeys.map((k) => del(k)));
   // Drop reserved keys too — only used by the old code path. Keep for safety.
   void reservedKeys;
-  await Promise.all(items.map((it) => set(it.id, it)));
+
+  // Entries that still carry pre-migration File blobs are the only copy of
+  // that audio/sheet until it has been uploaded to R2. This function runs on
+  // every successful cloud list, including the empty one that happens right
+  // after the token is entered — so it must not delete them, or the local
+  // library would be wiped before the migration banner ever runs.
+  const pendingUpload = new Set<string>();
+  for (const k of itemKeys) {
+    const v = await get<unknown>(k);
+    if (hasLocalBlobs(v)) {
+      pendingUpload.add(k as string);
+    }
+  }
+
+  await Promise.all(itemKeys.filter((k) => !pendingUpload.has(k as string)).map((k) => del(k)));
+  // Don't let a cloud mirror overwrite an entry that still holds local blobs.
+  await Promise.all(
+    items.filter((it) => !pendingUpload.has(it.id)).map((it) => set(it.id, it)),
+  );
 }
 
 async function readIdbAll(): Promise<LoadedItem[]> {
@@ -95,7 +121,16 @@ export const Store = {
       const { items } = await c.list();
       // Fire-and-forget local cache update.
       writeIdbCache(items).catch(() => {});
-      return items;
+      // Items whose files still only exist on this device (not migrated yet)
+      // belong in the list too — otherwise the library looks empty right
+      // before the migration prompt appears.
+      const cloudIds = new Set(items.map((i) => i.id));
+      const localOnly = (await readIdbAll()).filter(
+        (i) => !cloudIds.has(i.id) && hasLocalBlobs(i),
+      );
+      return [...items, ...localOnly].sort(
+        (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0),
+      );
     } catch (e) {
       console.warn('[Store.getAllItems] cloud read failed, using IDB cache', e);
       return readIdbAll();
