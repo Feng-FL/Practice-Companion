@@ -12,7 +12,7 @@
 // updating the list at the same time can't silently clobber each other.
 
 import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { s3, BUCKET } from './r2';
+import { s3, BUCKET } from './r2.js';
 
 const META_KEY = 'meta/repertoire.json';
 

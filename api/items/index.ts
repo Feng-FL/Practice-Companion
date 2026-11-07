@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { kv } from '../_lib/kv';
-import { requireAuth } from '../_lib/auth';
-import { error } from '../_lib/errors';
-import { presignGet, headObject } from '../_lib/r2';
-import type { CloudItem, LoadedItem, CloudFileRef } from '../../src/lib/types';
+import { kv } from '../_lib/kv.js';
+import { requireAuth } from '../_lib/auth.js';
+import { error } from '../_lib/errors.js';
+import { presignGet, headObject } from '../_lib/r2.js';
+import type { CloudItem, LoadedItem, CloudFileRef } from '../../src/lib/types.js';
 
 const KEY_PREFIX = 'repertoire:';
 const MAX_LIST = 1000;

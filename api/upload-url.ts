@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireAuth } from './_lib/auth';
-import { error } from './_lib/errors';
-import { presignPut, objectKey } from './_lib/r2';
+import { requireAuth } from './_lib/auth.js';
+import { error } from './_lib/errors.js';
+import { presignPut, objectKey } from './_lib/r2.js';
 
 interface RequestBody {
   itemId?: string;

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { error } from './errors';
+import { error } from './errors.js';
 
 export function requireAuth(req: VercelRequest, res: VercelResponse): boolean {
   const expected = process.env.SYNC_TOKEN;
