@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const keys: string[] = [];
       let cursor: string | number = '0';
       do {
-        // @vercel/kv's scan returns [nextCursor, keys]
+        // The metadata store's scan returns [nextCursor, keys]
         const scan = await kv.scan(cursor as number, { match: `${KEY_PREFIX}*`, count: 100 });
         keys.push(...scan[1]);
         cursor = scan[0];

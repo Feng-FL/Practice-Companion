@@ -15,7 +15,6 @@
     "@aws-sdk/s3-request-presigner": "^3.700.0",
     "@google/genai": "^1.29.0",
     "@tailwindcss/vite": "^4.1.14",
-    "@vercel/kv": "^3.0.0",
     "@vercel/node": "^5.0.0",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
