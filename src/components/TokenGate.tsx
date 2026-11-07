@@ -29,7 +29,7 @@ export default function TokenGate() {
       if (e instanceof SyncError && e.status === 401) {
         setErr('Token rejected — check for typos.');
       } else if (e instanceof SyncError && e.status === 500) {
-        setErr('Server error. Make sure SYNC_TOKEN is set in your Vercel env vars.');
+        setErr('Server error. The token was accepted, but the cloud store is not reachable — check the Vercel env vars (SYNC_TOKEN, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET).');
       } else if (e instanceof Error) {
         setErr(e.message);
       } else {
